@@ -1,3 +1,13 @@
+// Copyright 2025 Maktab-e-Digital Systems Lahore.
+// Licensed under the Apache License, Version 2.0, see LICENSE file for details.
+// SPDX-License-Identifier: Apache-2.0
+//
+// Description:
+//
+// Author: Abdullah Nadeem / Talha Ayyaz
+// Date:   13/07/2025
+
+
 // Comparator 2x2 Module
 // Takes a 2x2 matrix of 8-bit unsigned inputs and outputs the maximum value
 
