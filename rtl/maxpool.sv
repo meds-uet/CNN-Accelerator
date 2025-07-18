@@ -7,6 +7,7 @@
 // Author: Abdullah Nadeem / Talha Ayyaz
 // Date:   15/07/2025
 
+
 module maxpool #(
     parameter int IFMAP_HEIGHT = 128,
     parameter int IFMAP_WIDTH  = 128,

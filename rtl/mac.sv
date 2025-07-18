@@ -10,13 +10,14 @@
 // Multiply-Accumulate Unit
 // Performs element-wise multiplication and summation
 // of feature window and kernel
+
 module mac #(
-    parameter int KERNEL_SIZE = 5,
+    parameter int KERNEL_SIZE = 3,
     parameter int DATA_WIDTH = 8
 )(
-    input logic signed [DATA_WIDTH-1:0] feature [0:KERNEL_SIZE-1][0:KERNEL_SIZE-1],
-    input logic signed [DATA_WIDTH-1:0] kernel [0:KERNEL_SIZE-1][0:KERNEL_SIZE-1],
-    output logic signed [DATA_WIDTH*2+`$clog2(KERNEL_SIZE*KERNEL_SIZE)-1:0] result
+    input  logic         [DATA_WIDTH-1:0] feature [0:KERNEL_SIZE-1][0:KERNEL_SIZE-1],
+    input  logic signed  [DATA_WIDTH-1:0] kernel [0:KERNEL_SIZE-1][0:KERNEL_SIZE-1],
+    output logic signed  [DATA_WIDTH*2+`$clog2(KERNEL_SIZE*KERNEL_SIZE)-1:0] result
 );
 
     localparam int NUM_PRODUCTS = KERNEL_SIZE * KERNEL_SIZE;

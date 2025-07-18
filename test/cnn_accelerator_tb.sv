@@ -1,10 +1,10 @@
 module cnn_accelerator_tb;
 
     // Parameters
-    localparam int IFMAP_HEIGHT = 128;
-    localparam int IFMAP_WIDTH = 128;
-    localparam int KERNEL_HEIGHT = 5;
-    localparam int KERNEL_WIDTH = 5;
+    localparam int IFMAP_HEIGHT = 512;
+    localparam int IFMAP_WIDTH = 512;
+    localparam int KERNEL_HEIGHT = 3;
+    localparam int KERNEL_WIDTH = 3;
     localparam int DATA_WIDTH = 8;
     localparam int H_STRIDE = 1;
     localparam int V_STRIDE = 1;
@@ -19,7 +19,7 @@ module cnn_accelerator_tb;
     // Signals
     logic clk = 0;
     logic reset, en;
-    logic signed [DATA_WIDTH-1:0] ifmap [0:IFMAP_HEIGHT-1][0:IFMAP_WIDTH-1];
+    logic [DATA_WIDTH-1:0] ifmap [0:IFMAP_HEIGHT-1][0:IFMAP_WIDTH-1];
     logic signed [DATA_WIDTH-1:0] kernel [0:KERNEL_HEIGHT-1][0:KERNEL_WIDTH-1];
     logic [DATA_WIDTH-1:0] conv_ofmap [0:CONV_OFMAP_HEIGHT-1][0:CONV_OFMAP_WIDTH-1];
     logic [DATA_WIDTH-1:0] pool_ofmap [0:POOL_OFMAP_HEIGHT-1][0:POOL_OFMAP_WIDTH-1];
@@ -110,11 +110,9 @@ module cnn_accelerator_tb;
 
         // Initialize kernel
         kernel = '{
-            '{ 1,  0, -1,  0,  1},
-            '{ 1,  0, -1,  0,  1},
-            '{ 1,  0, -1,  0,  1},
-            '{ 1,  0, -1,  0,  1},
-            '{ 1,  0, -1,  0,  1}
+            '{ 1,  0, -1},
+            '{ 1,  0, -1},
+            '{ 1,  0, -1}
         };
 
         load_ifmap_from_file();
@@ -130,7 +128,7 @@ module cnn_accelerator_tb;
                 fork
             wait(done_pool);
             begin
-                #300000;
+                #5000000;
                 $display("ERROR: Simulation timeout - done_pool never asserted");
                 $finish;
             end

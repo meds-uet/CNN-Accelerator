@@ -9,7 +9,7 @@ TB_FILES      := $(wildcard $(TB_DIR)/*.sv)
 VCD_FILE      := wave.vcd
 IMG 		  := test/imgs/image2.png
 # IMG := ofmap.png
-SIZE := 128x128
+SIZE := 512x512
 
 # Tools
 VLOG          := vlog
@@ -17,7 +17,7 @@ VSIM          := vsim
 GTKWAVE       := gtkwave
 
 # Top module
-TOP_MODULE    := conv_tb
+TOP_MODULE    := cnn_accelerator_tb
 
 # Simulation flags (ENABLE VCD DUMPING)
 VSIM_FLAGS    := -c -do "run -all; quit -f" -voptargs="+acc" +vcdfile=$(VCD_FILE)

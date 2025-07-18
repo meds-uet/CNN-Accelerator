@@ -8,8 +8,8 @@
 // Date:   03/07/2025
 
 module conv #(
-    parameter int IFMAP_HEIGHT  = 6,
-    parameter int IFMAP_WIDTH   = 6,
+    parameter int IFMAP_HEIGHT  = 512,
+    parameter int IFMAP_WIDTH   = 512,
     parameter int KERNEL_HEIGHT = 3,
     parameter int KERNEL_WIDTH  = 3,
     parameter int DATA_WIDTH    = 8,
