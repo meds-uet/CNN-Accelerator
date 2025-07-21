@@ -1,8 +1,10 @@
+`timescale 1ns/1ps
+
 module cnn_tb;
 
     // CONFIGURABLE PARAMETERS
-    localparam int IFMAP_HEIGHT  = 128;
-    localparam int IFMAP_WIDTH   = 128;
+    localparam int IFMAP_HEIGHT  = 256;
+    localparam int IFMAP_WIDTH   = 256;
     localparam int KERNEL_HEIGHT = 3;
     localparam int KERNEL_WIDTH  = 3;
     localparam int DATA_WIDTH    = 8;
@@ -10,8 +12,8 @@ module cnn_tb;
     localparam int V_STRIDE      = 1;
     localparam int PADDING       = 1;
 
-    localparam int OFMAP_HEIGHT = (IFMAP_HEIGHT - KERNEL_HEIGHT + 2 * PADDING) / V_STRIDE;
-    localparam int OFMAP_WIDTH  = (IFMAP_WIDTH  - KERNEL_WIDTH  + 2 * PADDING) / H_STRIDE;
+    localparam int OFMAP_HEIGHT = (IFMAP_HEIGHT - KERNEL_HEIGHT + 2 * PADDING) / V_STRIDE / 2;
+    localparam int OFMAP_WIDTH  = (IFMAP_WIDTH  - KERNEL_WIDTH  + 2 * PADDING) / H_STRIDE / 2;
 
     // DUT Signals
     logic clk = 0;
@@ -25,7 +27,7 @@ module cnn_tb;
     always #5 clk = ~clk;
 
     // DUT instantiation
-    conv #(
+    cnn_accelerator #(
         .IFMAP_HEIGHT(IFMAP_HEIGHT),
         .IFMAP_WIDTH(IFMAP_WIDTH),
         .KERNEL_HEIGHT(KERNEL_HEIGHT),
@@ -38,15 +40,15 @@ module cnn_tb;
         .clk(clk),
         .reset(reset),
         .en(en),
-        .ifmap(ifmap),
+        .ifmap_in(ifmap),
         .weights(weights),
-        .ofmap(ofmap),
-        .done_conv(done)
+        .out_feature(ofmap),
+        .done(done)
     );
 
     // Dump waveform
     initial begin
-        $dumpfile("conv_wave.vcd");
+        $dumpfile("cnn_wave.vcd");
         $dumpvars(0, cnn_tb);
     end
 
@@ -96,7 +98,7 @@ module cnn_tb;
     // Stimulus
     initial begin
         int fd_ifmap = $fopen("ifmap.txt", "r");
-        int fd_weights = $fopen("imgs/weights.txt", "r");
+        int fd_weights = $fopen("test/imgs/weights.txt", "r");
         if (!fd_ifmap) $fatal("Failed to open ifmap.txt");
 
         foreach (ifmap[i, j]) begin

@@ -32,10 +32,11 @@ module conv #(
     localparam int PADDED_WIDTH  = IFMAP_WIDTH + 2*PADDING;
     localparam int OFMAP_HEIGHT  = (PADDED_HEIGHT - KERNEL_HEIGHT) / V_STRIDE + 1;
     localparam int OFMAP_WIDTH   = (PADDED_WIDTH - KERNEL_WIDTH) / H_STRIDE + 1;
+    localparam int MAC_WIDTH = (DATA_WIDTH * 2) + $clog2(KERNEL_HEIGHT * KERNEL_WIDTH);
 
     logic [DATA_WIDTH-1:0] window_data [0:KERNEL_HEIGHT-1][0:KERNEL_WIDTH-1];  // UNSIGNED
 
-    logic signed [21:0] mac_result;
+    logic signed [MAC_WIDTH-1:0] mac_result;
 
     logic [DATA_WIDTH-1:0] relu_out;
 
@@ -51,6 +52,7 @@ module conv #(
     } conv_state_t;
 
     conv_state_t current_state, next_state;
+    logic is_process, is_done;
 
     // MAC Unit: must cast unsigned input to signed internally
     mac mac_unit (
@@ -84,12 +86,18 @@ module conv #(
         endcase
     end
 
+    // State Output Logic
+    always_comb begin
+        is_process = (current_state == STATE_PROCESS);
+        is_done    = (current_state == STATE_DONE);
+    end
+
     // Output Row/Column Counter Logic
     always_ff @(posedge clk or posedge reset) begin
         if (reset) begin
             out_row <= 0;
             out_col <= 0;
-        end else if (en && current_state == STATE_PROCESS) begin
+        end else if (en && is_process) begin
             if (out_col == OFMAP_WIDTH-1) begin
                 out_col <= 0;
                 out_row <= out_row + 1;
@@ -125,6 +133,6 @@ module conv #(
     end
 
     assign is_last_pixel = (out_row == OFMAP_HEIGHT-1) && (out_col == OFMAP_WIDTH-1);
-    assign done_conv = (current_state == STATE_DONE);
+    assign done_conv = is_done;
 
 endmodule
