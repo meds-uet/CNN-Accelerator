@@ -7,11 +7,12 @@
 // Author: Abdullah Nadeem / Talha Ayyaz
 // Date:   17/07/2025
 
+`include "cnn_defs.svh"
 
 module flatten #(
-    parameter int ROW = 6,
-    parameter int COL = 6,
-    parameter int DATA_WIDTH = 8
+    parameter int ROW = OFMAP_WIDTH,
+    parameter int COL = OFMAP_HEIGHT,
+    parameter int DATA_WIDTH = DATA_WIDTH
 )(
     input  logic [DATA_WIDTH-1:0] feature [0:ROW-1][0:COL-1],
     output logic [DATA_WIDTH-1:0] flatten [0:ROW*COL-1]

@@ -12,7 +12,7 @@
 `define CNN_DEFS_SVH
 
 // -----------------------------------------------------------------------------
-// Global CNN Parameters (can be overridden in top-level module)
+// Global CNN Parameters
 // -----------------------------------------------------------------------------
 parameter int DATA_WIDTH      = 8;
 parameter int IFMAP_HEIGHT    = 128;
@@ -23,5 +23,14 @@ parameter int KERNEL_SIZE     = 3;
 parameter int H_STRIDE        = 2;
 parameter int V_STRIDE        = 2;
 parameter int PADDING         = 1;
+
+
+// -----------------------------------------------------------------------------
+// Derived CNN Parameters
+// -----------------------------------------------------------------------------
+
+parameter int OFMAP_HEIGHT    = (IFMAP_HEIGHT-KERNEL_HEIGHT+2*PADDING)/V_STRIDE;
+parameter int OFMAP_WIDTH     = (IFMAP_WIDTH-KERNEL_WIDTH+2*PADDING)/H_STRIDE;
+
 
 `endif
