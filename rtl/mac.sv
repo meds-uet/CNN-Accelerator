@@ -21,9 +21,12 @@
  * 2. Sum all products using a balanced adder tree (logarithmic depth).
  * 3. Output final accumulated result (combinational).
  */
+
+`include "cnn_defs.svh"
+
 module mac #(
-    parameter int KERNEL_SIZE = 3,   // Supported: 3 or 5
-    parameter int DATA_WIDTH = 8      // Bit-width of input data
+    parameter int KERNEL_SIZE = KERNEL_SIZE,   // Supported: 3 or 5
+    parameter int DATA_WIDTH = DATA_WIDTH      // Bit-width of input data
 )(
     // Inputs
     input  logic [DATA_WIDTH-1:0] feature [0:KERNEL_SIZE-1][0:KERNEL_SIZE-1],  // Feature map (unsigned)

@@ -1,4 +1,4 @@
-# Convolutional Neural Network (CNN) Architecture
+# Convolutional Neural Network (CNN) Architecture Overview
 
 This project includes a CNN (Convolutional Neural Network) written in **SystemVerilog**.
 It is built for simulation and testing image classification logic in hardware design.
@@ -37,7 +37,7 @@ CNN-ACCELERATOR/
 
 ##  How the CNN Works
 
-This CNN Architecture consists of `6 modules` with `1 header file`. The CNN hardware implementation follows a sequence. The image is converted into a txt file so it can be read by the HDL, the txt file is then sent to the `SV` implementation where it is `Convoluted` using `MAC Adder Tree` then `Max Pooled` and `flattened` to give an `1D Array`   
+This projects contains a configurable CNN Archtecure which performs all the necesaasry functions to    
 
 1. **Input Image**
    - The image is given to the CNN Architecture as pixel data `grayscale`.

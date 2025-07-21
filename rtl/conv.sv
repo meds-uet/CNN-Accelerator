@@ -7,15 +7,17 @@
 // Author: Abdullah Nadeem / Talha Ayyaz
 // Date:   03/07/2025
 
+`include "cnn_defs.svh"
+
 module conv #(
-    parameter int IFMAP_HEIGHT  = 512,
-    parameter int IFMAP_WIDTH   = 512,
-    parameter int KERNEL_HEIGHT = 3,
-    parameter int KERNEL_WIDTH  = 3,
-    parameter int DATA_WIDTH    = 8,
-    parameter int H_STRIDE      = 1,
-    parameter int V_STRIDE      = 1,
-    parameter int PADDING       = 1
+    parameter int IFMAP_HEIGHT  = IFMAP_HEIGHT,
+    parameter int IFMAP_WIDTH   = IFMAP_WIDTH,
+    parameter int KERNEL_HEIGHT = KERNEL_HEIGHT,
+    parameter int KERNEL_WIDTH  = KERNEL_WIDTH,
+    parameter int DATA_WIDTH    = DATA_WIDTH,
+    parameter int H_STRIDE      = H_STRIDE,
+    parameter int V_STRIDE      = V_STRIDE,
+    parameter int PADDING       = PADDING
 )(
     input  logic clk,
     input  logic reset,

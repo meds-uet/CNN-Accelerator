@@ -7,139 +7,197 @@
 // Author: Abdullah Nadeem / Talha Ayyaz
 // Date:   15/07/2025
 
+`include "cnn_defs.svh"
 
 module maxpool #(
-    parameter int IFMAP_HEIGHT = 128,
-    parameter int IFMAP_WIDTH  = 128,
-    parameter int DATA_WIDTH   = 8
-)(
-    input  logic clk,
-    input  logic reset,
-    input  logic en,
+        parameter int IFMAP_HEIGHT = IFMAP_HEIGHT,
+        parameter int IFMAP_WIDTH = IFMAP_WIDTH,
+        parameter int DATA_WIDTH = DATA_WIDTH
+    )(
+        input logic clk,
+        input logic reset,
+        input logic en,
+        input logic [DATA_WIDTH-1:0] ifmap [0:IFMAP_HEIGHT-1][0:IFMAP_WIDTH-1],
+        output logic [DATA_WIDTH-1:0] ofmap [0:(IFMAP_HEIGHT/2)-1][0:(IFMAP_WIDTH/2)-1],
+        output logic done_pool
+    );
 
-    input  logic [DATA_WIDTH-1:0] ifmap [0:IFMAP_HEIGHT-1][0:IFMAP_WIDTH-1],
-    output logic [DATA_WIDTH-1:0] ofmap [0:(IFMAP_HEIGHT/2)-1][0:(IFMAP_WIDTH/2)-1],
+    localparam int OFMAP_HEIGHT = IFMAP_HEIGHT / 2;
+    localparam int OFMAP_WIDTH = IFMAP_WIDTH / 2;
+    localparam int TOTAL_WINDOWS = OFMAP_HEIGHT * OFMAP_WIDTH;
 
-    output logic done_pool
-);
-
-    localparam int STRIDE       = 2;
-    localparam int POOL_SIZE    = 2;
-    localparam int OFMAP_HEIGHT = IFMAP_HEIGHT / POOL_SIZE;
-    localparam int OFMAP_WIDTH  = IFMAP_WIDTH  / POOL_SIZE;
-
-    logic [$clog2(OFMAP_HEIGHT)-1:0] out_row;
-    logic [$clog2(OFMAP_WIDTH)-1:0]  out_col;
-
-    logic [DATA_WIDTH-1:0] window [0:1][0:1];
-    logic [DATA_WIDTH-1:0] max_val;
-    logic maxpool_done;
-
-    typedef enum logic [2:0] {
+    // State machine
+    typedef enum logic [1:0] {
         IDLE,
-        LOAD_WINDOW,
-        COMPARE,
-        STORE_RESULT,
+        PROCESSING,
         DONE
     } state_t;
 
     state_t state, next_state;
 
-    // Instantiate comparator module
-    comparator pool_comp (
-        .in(window),
-        .out(max_val),
-        .maxpool_done(maxpool_done)
-    );
+    // Address counters
+    logic [$clog2(OFMAP_HEIGHT)-1:0] row_addr;
+    logic [$clog2(OFMAP_WIDTH)-1:0] col_addr;
+    logic [$clog2(TOTAL_WINDOWS):0] window_count;
 
-    // FSM: State Register
+    // Pipeline registers for 2x2 window
+    logic [DATA_WIDTH-1:0] window_data [0:3];
+    logic [DATA_WIDTH-1:0] max_result;
+    logic result_valid;
+
+    // Address tracking for pipeline
+    logic [$clog2(OFMAP_HEIGHT)-1:0] result_row;
+    logic [$clog2(OFMAP_WIDTH)-1:0] result_col;
+
+    // State machine
     always_ff @(posedge clk or posedge reset) begin
-        if (reset)
+        if (reset) begin
             state <= IDLE;
-        else
+        end else begin
             state <= next_state;
+        end
     end
 
-    // FSM: Next State Logic
     always_comb begin
+        next_state = state;
         case (state)
             IDLE: begin
-                if (en)
-                    next_state = LOAD_WINDOW;
-                else
-                    next_state = IDLE;
+                if (en) begin
+                    next_state = PROCESSING;
+                end
             end
-
-            LOAD_WINDOW: begin
-                next_state = COMPARE;
-            end
-
-            COMPARE: begin
-                if (maxpool_done)
-                    next_state = STORE_RESULT;
-                else
-                    next_state = COMPARE;
-            end
-
-            STORE_RESULT: begin
-                if (out_row == OFMAP_HEIGHT-1 && out_col == OFMAP_WIDTH-1)
+            PROCESSING: begin
+                if (window_count >= TOTAL_WINDOWS) begin
                     next_state = DONE;
-                else
-                    next_state = LOAD_WINDOW;
+                end else if (!en) begin
+                    next_state = IDLE;
+                end
             end
-
-            DONE: next_state = DONE;
-
-            default: next_state = IDLE;
+            DONE: begin
+                if (!en) begin
+                    next_state = IDLE;
+                end
+            end
         endcase
     end
 
-    // Output Counters
+    // Address generation and control
     always_ff @(posedge clk or posedge reset) begin
         if (reset) begin
-            out_row <= 0;
-            out_col <= 0;
-        end else if (state == STORE_RESULT) begin
-            if (out_col == OFMAP_WIDTH - 1) begin
-                out_col <= 0;
-                out_row <= out_row + 1;
-            end else begin
-                out_col <= out_col + 1;
-            end
-        end
-    end
-
-    // Load 2x2 window from input feature map
-    always_ff @(posedge clk) begin
-        if (state == LOAD_WINDOW) begin
-            // Manually load values using if-statements
-            if (out_row * STRIDE < IFMAP_HEIGHT && out_col * STRIDE < IFMAP_WIDTH)
-                window[0][0] <= ifmap[out_row * STRIDE][out_col * STRIDE];
-
-            if (out_row * STRIDE < IFMAP_HEIGHT && (out_col * STRIDE + 1) < IFMAP_WIDTH)
-                window[0][1] <= ifmap[out_row * STRIDE][out_col * STRIDE + 1];
-
-            if ((out_row * STRIDE + 1) < IFMAP_HEIGHT && out_col * STRIDE < IFMAP_WIDTH)
-                window[1][0] <= ifmap[out_row * STRIDE + 1][out_col * STRIDE];
-
-            if ((out_row * STRIDE + 1) < IFMAP_HEIGHT && (out_col * STRIDE + 1) < IFMAP_WIDTH)
-                window[1][1] <= ifmap[out_row * STRIDE + 1][out_col * STRIDE + 1];
-        end
-    end
-
-    // Store max value to ofmap
-    always_ff @(posedge clk) begin
-        if (state == STORE_RESULT) begin
-            ofmap[out_row][out_col] <= max_val;
-        end
-    end
-
-    // Done signal
-    always_ff @(posedge clk or posedge reset) begin
-        if (reset)
+            row_addr <= 0;
+            col_addr <= 0;
+            window_count <= 0;
             done_pool <= 0;
-        else if (state == DONE)
-            done_pool <= 1;
+        end else begin
+            case (state)
+                IDLE: begin
+                    row_addr <= 0;
+                    col_addr <= 0;
+                    window_count <= 0;
+                    done_pool <= 0;
+                end
+                PROCESSING: begin
+                    if (window_count < TOTAL_WINDOWS) begin
+                        window_count <= window_count + 1;
+                        
+                        // Generate next address
+                        if (col_addr == OFMAP_WIDTH - 1) begin
+                            col_addr <= 0;
+                            if (row_addr == OFMAP_HEIGHT - 1) begin
+                                row_addr <= 0;
+                            end else begin
+                                row_addr <= row_addr + 1;
+                            end
+                        end else begin
+                            col_addr <= col_addr + 1;
+                        end
+                    end
+                end
+                DONE: begin
+                    done_pool <= 1;
+                end
+            endcase
+        end
+    end
+
+    // Pipeline Stage 1: Load 2x2 window and find max in one cycle
+    always_ff @(posedge clk or posedge reset) begin
+        if (reset) begin
+            window_data[0] <= 0;
+            window_data[1] <= 0;
+            window_data[2] <= 0;
+            window_data[3] <= 0;
+            result_valid <= 0;
+            result_row <= 0;
+            result_col <= 0;
+            max_result <= 0;
+        end else if (state == PROCESSING && window_count < TOTAL_WINDOWS) begin
+            // Load 2x2 window with bounds checking
+            window_data[0] <= ifmap[row_addr * 2][col_addr * 2];
+            
+            if (col_addr * 2 + 1 < IFMAP_WIDTH) begin
+                window_data[1] <= ifmap[row_addr * 2][col_addr * 2 + 1];
+            end else begin
+                window_data[1] <= 0;
+            end
+            
+            if (row_addr * 2 + 1 < IFMAP_HEIGHT) begin
+                window_data[2] <= ifmap[row_addr * 2 + 1][col_addr * 2];
+            end else begin
+                window_data[2] <= 0;
+            end
+            
+            if (row_addr * 2 + 1 < IFMAP_HEIGHT && col_addr * 2 + 1 < IFMAP_WIDTH) begin
+                window_data[3] <= ifmap[row_addr * 2 + 1][col_addr * 2 + 1];
+            end else begin
+                window_data[3] <= 0;
+            end
+            
+            // Store address for this window
+            result_row <= row_addr;
+            result_col <= col_addr;
+            result_valid <= 1;
+        end else begin
+            result_valid <= 0;
+        end
+    end
+
+    // Pipeline Stage 2: Find maximum (combinational for this cycle, registered next cycle)
+    logic [DATA_WIDTH-1:0] max_01, max_23, final_max;
+    logic [DATA_WIDTH-1:0] delayed_max;
+    logic [$clog2(OFMAP_HEIGHT)-1:0] delayed_row;
+    logic [$clog2(OFMAP_WIDTH)-1:0] delayed_col;
+    logic delayed_valid;
+
+    comparator #(.DATA_WIDTH(DATA_WIDTH)) comparator (
+        .input1(window_data[0]),
+        .input2(window_data[1]),
+        .input3(window_data[2]),
+        .input4(window_data[3]),
+        .max_val(final_max)
+    );
+
+
+    // Register the result for output
+    always_ff @(posedge clk or posedge reset) begin
+        if (reset) begin
+            delayed_max <= 0;
+            delayed_row <= 0;
+            delayed_col <= 0;
+            delayed_valid <= 0;
+        end else begin
+            delayed_max <= final_max;
+            delayed_row <= result_row;
+            delayed_col <= result_col;
+            delayed_valid <= result_valid;
+        end
+    end
+
+    // Output assignment
+    always_ff @(posedge clk or posedge reset) begin
+    if (delayed_valid && delayed_row < OFMAP_HEIGHT && delayed_col < OFMAP_WIDTH) begin
+            ofmap[delayed_row][delayed_col] <= delayed_max;
+        end
     end
 
 endmodule
