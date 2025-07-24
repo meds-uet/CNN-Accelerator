@@ -4,7 +4,7 @@
 //
 // Description:
 //
-// Author: Abdullah Nadeem / Talha Ayyaz
+// Author: Abdullah Nadeem & Talha Ayyaz
 // Date:   17/07/2025
 
 
@@ -15,22 +15,48 @@
 // Global CNN Parameters
 // -----------------------------------------------------------------------------
 parameter int DATA_WIDTH      = 8;
-parameter int IFMAP_HEIGHT    = 128;
-parameter int IFMAP_WIDTH     = 128;
-parameter int KERNEL_HEIGHT   = 3;
-parameter int KERNEL_WIDTH    = 3;
+parameter int IFMAP_SIZE      = 128;
 parameter int KERNEL_SIZE     = 3;
-parameter int H_STRIDE        = 2;
-parameter int V_STRIDE        = 2;
+parameter int STRIDE          = 2;
 parameter int PADDING         = 1;
 
+// -----------------------------------------------------------------------------
+// Derived CONV Parameters
+// -----------------------------------------------------------------------------
+
+parameter int CONV_OFMAP_SIZE       = (IFMAP_SIZE - KERNEL_SIZE + 2 * PADDING) / STRIDE + 1;
+// parameter int MAC_WIDTH             = (DATA_WIDTH * 2) + $clog2(KERNEL_SIZE << 2);               <-- Made for any kernel size -->
+parameter int CONV_COUNTER_SIZE     = $clog2(CONV_OFMAP_SIZE);
+
+typedef enum logic [1:0] {
+    STATE_IDLE,
+    STATE_PROCESS,
+    STATE_DONE
+} conv_state_t;
 
 // -----------------------------------------------------------------------------
-// Derived CNN Parameters
+// Derived MAC Parameters
 // -----------------------------------------------------------------------------
 
-parameter int OFMAP_HEIGHT    = (IFMAP_HEIGHT-KERNEL_HEIGHT+2*PADDING)/V_STRIDE;
-parameter int OFMAP_WIDTH     = (IFMAP_WIDTH-KERNEL_WIDTH+2*PADDING)/H_STRIDE;
+// parameter int MAC_PRODUCT_COUNT     = KERNEL_SIZE * KERNEL_SIZE;
+parameter int MAC_PRODUCT_COUNT     = (KERNEL_SIZE == 3) ? 9 : 25;
+parameter int MAC_PRODUCT_WIDTH     = DATA_WIDTH << 1;
+parameter int MAC_RESULT_WIDTH      = MAC_PRODUCT_WIDTH + $clog2(MAC_PRODUCT_COUNT);
+
+// -----------------------------------------------------------------------------
+// Derived POOL Parameters
+// -----------------------------------------------------------------------------
+
+parameter int POOL_OFMAP_SIZE       = CONV_OFMAP_SIZE >> 1;
+parameter int POOL_PIXEL_COUNT      = POOL_OFMAP_SIZE * POOL_OFMAP_SIZE;
+parameter int POOL_COUNTER_SIZE     = $clog2(POOL_OFMAP_SIZE);            
+// parameter int POOL_COUNTER_SIZE     = $clog2(4);
+
+typedef enum logic [1:0] {
+    IDLE,
+    PROCESSING,
+    DONE
+} pool_state_t;
 
 
 `endif
