@@ -4,7 +4,7 @@
 //
 // Description:
 //
-// Author: Abdullah Nadeem / Talha Ayyaz
+// Author: Abdullah Nadeem & Talha Ayyaz
 // Date:   03/07/2025
 
 `include "cnn_defs.svh"
@@ -23,59 +23,68 @@ module conv (
 );
 
 
-    logic           [DATA_WIDTH-1:0]    window_data     [0:KERNEL_SIZE-1][0:KERNEL_SIZE-1];  // UNSIGNED
+    logic           [DATA_WIDTH-1:0]            conv_window     [0:KERNEL_SIZE-1][0:KERNEL_SIZE-1];  // UNSIGNED
 
-    logic signed    [MAC_WIDTH-1:0]     mac_result;
+    logic signed    [MAC_RESULT_WIDTH-1:0]      mac_result;
 
-    logic           [DATA_WIDTH-1:0]    relu_out;
+    logic           [DATA_WIDTH-1:0]            relu_out;
 
-    logic           [CONV_COUNTER_SIZE-1:0]     out_row;
-    logic           [CONV_COUNTER_SIZE-1:0]     out_col;
+    logic           [CONV_COUNTER_SIZE-1:0]     conv_window_row;
+    logic           [CONV_COUNTER_SIZE-1:0]     conv_window_col;
 
     logic           is_last_pixel;
 
-    conv_state_t    current_state, next_state;
+    conv_state_t    conv_current_state, conv_next_state;
     logic           is_process, is_done;
+
+    int targeted_col, targeted_row;
+
 
 
     // MAC Unit: must cast unsigned input to signed internally
     mac mac_unit (
-        .feature(window_data),
+        .feature(conv_window),
         .kernel(weights),
         .result(mac_result)
     );
+
+    // always @(clk) $display("Window @[%0d][%0d] [%0d][%0d]: \n%0d %0d %0d\n%0d %0d %0d\n%0d %0d %0d", 
+    // conv_window_row, conv_window_col, targeted_row, targeted_col,
+    // conv_window[0][0], conv_window[0][1], conv_window[0][2],
+    // conv_window[1][0], conv_window[1][1], conv_window[1][2],
+    // conv_window[2][0], conv_window[2][1], conv_window[2][2]);
 
 
     // FSM State Register
     always_ff @(posedge clk or posedge reset) begin
 
         if (reset)
-            current_state <= STATE_IDLE;
+            conv_current_state <= STATE_IDLE;
 
         else
-            current_state <= next_state;
+            conv_current_state <= conv_next_state;
     end
 
 
     // FSM Next State Logic
     always_comb begin
 
-        case (current_state)
+        case (conv_current_state)
             STATE_IDLE: 
                 if (en)
-                    next_state = STATE_PROCESS;
+                    conv_next_state = STATE_PROCESS;
 
             STATE_PROCESS:
                 if (is_last_pixel)
-                    next_state = STATE_DONE;
+                    conv_next_state = STATE_DONE;
                 else    
-                    next_state = STATE_PROCESS;
+                    conv_next_state = STATE_PROCESS;
 
             STATE_DONE:
-                next_state = current_state;
+                conv_next_state = conv_current_state;
                 
             default:
-                next_state = current_state;
+                conv_next_state = conv_current_state;
 
         endcase
     end
@@ -84,7 +93,7 @@ module conv (
     // State Output Logic
     always_comb begin
         
-        case (current_state)
+        case (conv_current_state)
             STATE_PROCESS: begin
                 is_process  = 1;
                 is_done     = 0;
@@ -107,19 +116,19 @@ module conv (
     always_ff @(posedge clk or posedge reset) begin
 
         if (reset) begin
-            out_row <= 0;
-            out_col <= 0;
+            conv_window_row <= 0;
+            conv_window_col <= 0;
         end 
         
         else if (en && is_process) begin
 
-            if ( 32'(out_col) == CONV_OFMAP_SIZE-1) begin
-                out_col <= 0;
-                out_row <= out_row + 1;
+            if ( 32'(conv_window_col) == CONV_OFMAP_SIZE-1) begin
+                conv_window_col <= 0;
+                conv_window_row <= conv_window_row + 1;
             end
             
             else
-                out_col <= out_col + 1;
+                conv_window_col <= conv_window_col + 1;
             
         end
     end
@@ -131,24 +140,22 @@ module conv (
         for (int i = 0; i < KERNEL_SIZE; i++) begin
             for (int j = 0; j < KERNEL_SIZE; j++) begin
 
-                int targeted_col, targeted_row;
-
                 if (STRIDE == 2) begin
-                    targeted_row =  32'(out_row) << 1 + i - PADDING;
-                    targeted_col =  32'(out_col) << 1 + j - PADDING;
+                    targeted_row =  (32'(conv_window_row) << 1) + i - PADDING;
+                    targeted_col =  (32'(conv_window_col) << 1) + j - PADDING;
                 end
                 
                 else begin
-                    targeted_row =  32'(out_row) + i - PADDING;
-                    targeted_col =  32'(out_col) + j - PADDING;
+                    targeted_row =  32'(conv_window_row) + i - PADDING;
+                    targeted_col =  32'(conv_window_col) + j - PADDING;
                 end
 
                 if (targeted_row < 0 || targeted_row >= IFMAP_SIZE || targeted_col < 0 || targeted_col >= IFMAP_SIZE)
-                    window_data[i][j] = '0;  // zero padding
+                    conv_window[i][j] = '0;  // zero padding
                 
                 
                 else 
-                    window_data[i][j] = conv_ifmap[targeted_row][targeted_col];
+                    conv_window[i][j] = conv_ifmap[targeted_row][targeted_col];
 
             end
         end
@@ -161,14 +168,14 @@ module conv (
         relu_out = mac_result[DATA_WIDTH-1:0];  // Truncate to 8-bit
 
         if (relu_out[DATA_WIDTH-1])
-            conv_ofmap[out_row][out_col] = 0;
+            conv_ofmap[conv_window_row][conv_window_col] = 0;
 
         else
-            conv_ofmap[out_row][out_col] = relu_out;
+            conv_ofmap[conv_window_row][conv_window_col] = relu_out;
 
     end
 
-    assign is_last_pixel    = ( 32'(out_row) == CONV_OFMAP_SIZE-1) && ( 32'(out_col) == CONV_OFMAP_SIZE-1);
+    assign is_last_pixel    = ( 32'(conv_window_row) == CONV_OFMAP_SIZE-1) && ( 32'(conv_window_col) == CONV_OFMAP_SIZE-1);
     assign conv_done        = is_done;
 
 endmodule
