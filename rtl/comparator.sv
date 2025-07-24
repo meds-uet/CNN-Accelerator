@@ -4,7 +4,7 @@
 //
 // Description:
 //
-// Author: Abdullah Nadeem / Talha Ayyaz
+// Author: Abdullah Nadeem & Talha Ayyaz
 // Date:   13/07/2025
 
 
@@ -13,34 +13,32 @@
 
 `include "cnn_defs.svh"
 
-module comparator #(
-        parameter int DATA_WIDTH = DATA_WIDTH
-    )(
-        input logic [DATA_WIDTH-1:0] input1, input2, input3, input4,
-        output logic [DATA_WIDTH-1:0] max_val
+module comparator (
+        input   logic   [DATA_WIDTH-1:0] input1, input2, input3, input4,
+        output  logic   [DATA_WIDTH-1:0] max_val
     );
 
     // Intermediate signals
     logic [DATA_WIDTH-1:0] max_top, max_bottom;
 
     always_comb begin
-        if (input1 > input2) begin
-            max_top = input1;
-        end else begin
+
+        if (input1 > input2) 
+            max_top = input1; 
+        else 
             max_top = input2;
-        end
         
-        if (input3 > input4) begin
-            max_bottom = input3;
-        end else begin
+
+        if (input3 > input4) 
+            max_bottom = input3; 
+        else 
             max_bottom = input4;
-        end
         
-        if (max_top > max_bottom) begin
+        if (max_top > max_bottom) 
             max_val = max_top;
-        end else begin
+        else 
             max_val = max_bottom;
-        end
+
     end
 
 endmodule

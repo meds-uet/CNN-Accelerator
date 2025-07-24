@@ -9,112 +9,100 @@
 
 `include "cnn_defs.svh"
 
-module maxpool #(
-        parameter int IFMAP_HEIGHT = IFMAP_HEIGHT,
-        parameter int IFMAP_WIDTH = IFMAP_WIDTH,
-        parameter int DATA_WIDTH = DATA_WIDTH
-    )(
-        input logic clk,
-        input logic reset,
-        input logic en,
-        input logic [DATA_WIDTH-1:0] ifmap [0:IFMAP_HEIGHT-1][0:IFMAP_WIDTH-1],
-        output logic [DATA_WIDTH-1:0] ofmap [0:(IFMAP_HEIGHT/2)-1][0:(IFMAP_WIDTH/2)-1],
-        output logic done_pool
+module maxpool (
+        input   logic   clk,
+        input   logic   reset,
+        input   logic   en,
+        input   logic   [DATA_WIDTH-1:0]    pool_ifmap   [0:CONV_OFMAP_SIZE-1][0:CONV_OFMAP_SIZE-1],
+
+        output  logic   [DATA_WIDTH-1:0]    pool_ofmap   [0:POOL_OFMAP_SIZE-1][0:POOL_OFMAP_SIZE-1],
+
+        output  logic   pool_done
     );
 
-    localparam int OFMAP_HEIGHT = IFMAP_HEIGHT / 2;
-    localparam int OFMAP_WIDTH = IFMAP_WIDTH / 2;
-    localparam int TOTAL_WINDOWS = OFMAP_HEIGHT * OFMAP_WIDTH;
-
-    // State machine
-    typedef enum logic [1:0] {
-        IDLE,
-        PROCESSING,
-        DONE
-    } state_t;
-
-    state_t state, next_state;
+    pool_state_t pool_current_state, pool_next_state;
 
     // Address counters
-    logic [$clog2(OFMAP_HEIGHT)-1:0] row_addr;
-    logic [$clog2(OFMAP_WIDTH)-1:0] col_addr;
-    logic [$clog2(TOTAL_WINDOWS):0] window_count;
+    logic [POOL_COUNTER_SIZE-1:0] pool_window_row;
+    logic [POOL_COUNTER_SIZE-1:0] pool_window_col;
+    logic [$clog2(POOL_PIXEL_COUNT):0] window_count;
 
     // Pipeline registers for 2x2 window
-    logic [DATA_WIDTH-1:0] window_data [0:3];
+    logic [DATA_WIDTH-1:0] pool_window [0:3];
     logic [DATA_WIDTH-1:0] max_result;
     logic result_valid;
 
     // Address tracking for pipeline
-    logic [$clog2(OFMAP_HEIGHT)-1:0] result_row;
-    logic [$clog2(OFMAP_WIDTH)-1:0] result_col;
+    logic [POOL_COUNTER_SIZE-1:0] result_row;
+    logic [POOL_COUNTER_SIZE-1:0] result_col;
 
     // State machine
     always_ff @(posedge clk or posedge reset) begin
         if (reset) begin
-            state <= IDLE;
+            pool_current_state <= IDLE;
         end else begin
-            state <= next_state;
+            pool_current_state <= pool_next_state;
         end
     end
 
     always_comb begin
-        next_state = state;
-        case (state)
+        pool_next_state = pool_current_state;
+        case (pool_current_state)
             IDLE: begin
                 if (en) begin
-                    next_state = PROCESSING;
+                    pool_next_state = PROCESSING;
                 end
             end
             PROCESSING: begin
-                if (window_count >= TOTAL_WINDOWS) begin
-                    next_state = DONE;
+                if (window_count >= POOL_PIXEL_COUNT) begin
+                    pool_next_state = DONE;
                 end else if (!en) begin
-                    next_state = IDLE;
+                    pool_next_state = IDLE;
                 end
             end
             DONE: begin
                 if (!en) begin
-                    next_state = IDLE;
+                    pool_next_state = IDLE;
                 end
             end
+            default: pool_next_state = IDLE;
         endcase
     end
 
     // Address generation and control
     always_ff @(posedge clk or posedge reset) begin
         if (reset) begin
-            row_addr <= 0;
-            col_addr <= 0;
+            pool_window_row <= 0;
+            pool_window_col <= 0;
             window_count <= 0;
-            done_pool <= 0;
+            pool_done <= 0;
         end else begin
-            case (state)
+            case (pool_current_state)
                 IDLE: begin
-                    row_addr <= 0;
-                    col_addr <= 0;
+                    pool_window_row <= 0;
+                    pool_window_col <= 0;
                     window_count <= 0;
-                    done_pool <= 0;
+                    pool_done <= 0;
                 end
                 PROCESSING: begin
-                    if (window_count < TOTAL_WINDOWS) begin
+                    if (window_count < POOL_PIXEL_COUNT) begin
                         window_count <= window_count + 1;
                         
                         // Generate next address
-                        if (col_addr == OFMAP_WIDTH - 1) begin
-                            col_addr <= 0;
-                            if (row_addr == OFMAP_HEIGHT - 1) begin
-                                row_addr <= 0;
+                        if (pool_window_col == POOL_OFMAP_SIZE - 1) begin
+                            pool_window_col <= 0;
+                            if (pool_window_row == POOL_OFMAP_SIZE - 1) begin
+                                pool_window_row <= 0;
                             end else begin
-                                row_addr <= row_addr + 1;
+                                pool_window_row <= pool_window_row + 1;
                             end
                         end else begin
-                            col_addr <= col_addr + 1;
+                            pool_window_col <= pool_window_col + 1;
                         end
                     end
                 end
                 DONE: begin
-                    done_pool <= 1;
+                    pool_done <= 1;
                 end
             endcase
         end
@@ -123,39 +111,39 @@ module maxpool #(
     // Pipeline Stage 1: Load 2x2 window and find max in one cycle
     always_ff @(posedge clk or posedge reset) begin
         if (reset) begin
-            window_data[0] <= 0;
-            window_data[1] <= 0;
-            window_data[2] <= 0;
-            window_data[3] <= 0;
+            pool_window[0] <= 0;
+            pool_window[1] <= 0;
+            pool_window[2] <= 0;
+            pool_window[3] <= 0;
             result_valid <= 0;
             result_row <= 0;
             result_col <= 0;
             max_result <= 0;
-        end else if (state == PROCESSING && window_count < TOTAL_WINDOWS) begin
+        end else if (pool_current_state == PROCESSING && 32'(window_count) < POOL_PIXEL_COUNT) begin
             // Load 2x2 window with bounds checking
-            window_data[0] <= ifmap[row_addr * 2][col_addr * 2];
+            pool_window[0] <= pool_ifmap[pool_window_row * 2][pool_window_col * 2];
             
-            if (col_addr * 2 + 1 < IFMAP_WIDTH) begin
-                window_data[1] <= ifmap[row_addr * 2][col_addr * 2 + 1];
+            if (pool_window_col * 2 + 1 < CONV_OFMAP_SIZE) begin
+                pool_window[1] <= pool_ifmap[pool_window_row * 2][pool_window_col * 2 + 1];
             end else begin
-                window_data[1] <= 0;
+                pool_window[1] <= 0;
             end
             
-            if (row_addr * 2 + 1 < IFMAP_HEIGHT) begin
-                window_data[2] <= ifmap[row_addr * 2 + 1][col_addr * 2];
+            if (pool_window_row * 2 + 1 < CONV_OFMAP_SIZE) begin
+                pool_window[2] <= pool_ifmap[pool_window_row * 2 + 1][pool_window_col * 2];
             end else begin
-                window_data[2] <= 0;
+                pool_window[2] <= 0;
             end
             
-            if (row_addr * 2 + 1 < IFMAP_HEIGHT && col_addr * 2 + 1 < IFMAP_WIDTH) begin
-                window_data[3] <= ifmap[row_addr * 2 + 1][col_addr * 2 + 1];
+            if (pool_window_row * 2 + 1 < CONV_OFMAP_SIZE && pool_window_col * 2 + 1 < CONV_OFMAP_SIZE) begin
+                pool_window[3] <= pool_ifmap[pool_window_row * 2 + 1][pool_window_col * 2 + 1];
             end else begin
-                window_data[3] <= 0;
+                pool_window[3] <= 0;
             end
             
             // Store address for this window
-            result_row <= row_addr;
-            result_col <= col_addr;
+            result_row <= pool_window_row;
+            result_col <= pool_window_col;
             result_valid <= 1;
         end else begin
             result_valid <= 0;
@@ -165,15 +153,15 @@ module maxpool #(
     // Pipeline Stage 2: Find maximum (combinational for this cycle, registered next cycle)
     logic [DATA_WIDTH-1:0] max_01, max_23, final_max;
     logic [DATA_WIDTH-1:0] delayed_max;
-    logic [$clog2(OFMAP_HEIGHT)-1:0] delayed_row;
-    logic [$clog2(OFMAP_WIDTH)-1:0] delayed_col;
+    logic [$clog2(POOL_OFMAP_SIZE)-1:0] delayed_row;
+    logic [$clog2(POOL_OFMAP_SIZE)-1:0] delayed_col;
     logic delayed_valid;
 
     comparator #(.DATA_WIDTH(DATA_WIDTH)) comparator (
-        .input1(window_data[0]),
-        .input2(window_data[1]),
-        .input3(window_data[2]),
-        .input4(window_data[3]),
+        .input1(pool_window[0]),
+        .input2(pool_window[1]),
+        .input3(pool_window[2]),
+        .input4(pool_window[3]),
         .max_val(final_max)
     );
 
@@ -195,8 +183,8 @@ module maxpool #(
 
     // Output assignment
     always_ff @(posedge clk or posedge reset) begin
-    if (delayed_valid && delayed_row < OFMAP_HEIGHT && delayed_col < OFMAP_WIDTH) begin
-            ofmap[delayed_row][delayed_col] <= delayed_max;
+    if (delayed_valid && 32'(delayed_row) < POOL_OFMAP_SIZE && 32'(delayed_col) < POOL_OFMAP_SIZE) begin
+            pool_ofmap[delayed_row][delayed_col] <= delayed_max;
         end
     end
 
