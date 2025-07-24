@@ -22,17 +22,20 @@ module mac (
     logic signed    [MAC_PRODUCT_WIDTH-1:0]     products    [0:MAC_PRODUCT_COUNT-1];
     logic signed    [MAC_RESULT_WIDTH-1:0]      temp_sum;
 
+
     // Multiplication Stage
     always_comb begin
+    int idx;        // static by default, no init here
+    idx = 0;        // init as first statement
 
-        int idx = 0;
-        for (int i = 0; i < KERNEL_SIZE; i++) 
-            for (int j = 0; j < KERNEL_SIZE; j++) 
-                products[idx] = feature[i][j] * kernel[i][j];
-
+    for (int i = 0; i < KERNEL_SIZE; i++) begin
+        for (int j = 0; j < KERNEL_SIZE; j++) begin
+        products[idx] = feature[i][j] * kernel[i][j];
         idx++;
-
+        end
     end
+    end
+
     
 
     // Adder Tree
