@@ -4,26 +4,23 @@
 //
 // Description:
 //
-// Author: Abdullah Nadeem / Talha Ayyaz
+// Author: Abdullah Nadeem & Talha Ayyaz
 // Date:   17/07/2025
 
 `include "cnn_defs.svh"
 
-module flatten #(
-    parameter int ROW = OFMAP_WIDTH,
-    parameter int COL = OFMAP_HEIGHT,
-    parameter int DATA_WIDTH = DATA_WIDTH
-)(
-    input  logic [DATA_WIDTH-1:0] feature [0:ROW-1][0:COL-1],
-    output logic [DATA_WIDTH-1:0] flatten [0:ROW*COL-1]
+module flatten(
+    input   logic   [DATA_WIDTH-1:0]    feature     [0:POOL_OFMAP_SIZE-1][0:POOL_OFMAP_SIZE-1],
+    output  logic   [DATA_WIDTH-1:0]    flatten_out [0:POOL_PIXEL_COUNT-1]
 );
 
     genvar i, j;
+    
     generate
-        for (i = 0; i < ROW; i++) begin 
-            for (j = 0; j < COL; j++) begin 
-                localparam int FLAT_INDEX = i * COL + j;
-                assign flatten[FLAT_INDEX] = feature[i][j];
+        for (i = 0; i < POOL_OFMAP_SIZE; i++) begin 
+            for (j = 0; j < POOL_OFMAP_SIZE; j++) begin 
+                localparam int FLAT_INDEX = i * POOL_OFMAP_SIZE + j;
+                assign flatten_out[FLAT_INDEX] = feature[i][j];
             end
         end
     endgenerate
