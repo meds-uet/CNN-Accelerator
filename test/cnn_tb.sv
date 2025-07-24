@@ -1,48 +1,26 @@
-`timescale 1ns/1ps
+// `timescale 1ns/1ps
+`include "../rtl/cnn_defs.svh"
 
 module cnn_tb;
-
-    // CONFIGURABLE PARAMETERS
-    localparam int IFMAP_HEIGHT  = 256;
-    localparam int IFMAP_WIDTH   = 256;
-    localparam int KERNEL_HEIGHT = 3;
-    localparam int KERNEL_WIDTH  = 3;
-    localparam int DATA_WIDTH    = 8;
-    localparam int H_STRIDE      = 1;
-    localparam int V_STRIDE      = 1;
-    localparam int PADDING       = 1;
-
-    localparam int OFMAP_HEIGHT = (IFMAP_HEIGHT - KERNEL_HEIGHT + 2 * PADDING) / V_STRIDE / 2;
-    localparam int OFMAP_WIDTH  = (IFMAP_WIDTH  - KERNEL_WIDTH  + 2 * PADDING) / H_STRIDE / 2;
-
     // DUT Signals
     logic clk = 0;
     logic reset, en;
-    logic [DATA_WIDTH-1:0] ifmap   [0:IFMAP_HEIGHT-1][0:IFMAP_WIDTH-1];
-    logic signed [DATA_WIDTH-1:0] weights [0:KERNEL_HEIGHT-1][0:KERNEL_WIDTH-1];
-    logic [DATA_WIDTH-1:0] ofmap  [0:OFMAP_HEIGHT][0:OFMAP_WIDTH]; // +1 due to 0 indexing
+    logic           [DATA_WIDTH-1:0]    ifmap   [0:IFMAP_SIZE-1][0:IFMAP_SIZE-1];
+    logic signed    [DATA_WIDTH-1:0]    weights     [0:KERNEL_SIZE-1][0:KERNEL_SIZE-1];
+    logic           [DATA_WIDTH-1:0]    ofmap   [0:POOL_OFMAP_SIZE-1][0:POOL_OFMAP_SIZE-1]; // +1 due to 0 indexing
     logic done;
 
     // Clock generation
     always #5 clk = ~clk;
 
     // DUT instantiation
-    cnn_accelerator #(
-        .IFMAP_HEIGHT(IFMAP_HEIGHT),
-        .IFMAP_WIDTH(IFMAP_WIDTH),
-        .KERNEL_HEIGHT(KERNEL_HEIGHT),
-        .KERNEL_WIDTH(KERNEL_WIDTH),
-        .DATA_WIDTH(DATA_WIDTH),
-        .H_STRIDE(H_STRIDE),
-        .V_STRIDE(V_STRIDE),
-        .PADDING(PADDING)
-    ) dut (
+    cnn_accelerator dut (
         .clk(clk),
         .reset(reset),
         .en(en),
-        .ifmap_in(ifmap),
+        .cnn_ifmap(ifmap),
         .weights(weights),
-        .out_feature(ofmap),
+        .cnn_ofmap(ofmap),
         .done(done)
     );
 
