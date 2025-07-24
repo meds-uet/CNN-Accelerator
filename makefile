@@ -5,11 +5,11 @@ BUILD_DIR     := build
 
 # Files
 DESIGN_FILES  := $(wildcard $(RTL_DIR)/*.sv)
-TB_FILES      := $(wildcard $(TB_DIR)/*.sv)
+# TB_FILES      := $(wildcard $(TB_DIR)/*.sv)
 VCD_FILE      := wave.vcd
 IMG 		  := test/imgs/image2.png
 # IMG := ofmap.png
-SIZE := 512x512
+SIZE := 128x128
 
 # Tools
 VLOG          := vlog
@@ -17,7 +17,7 @@ VSIM          := vsim
 GTKWAVE       := gtkwave
 
 # Top module
-TOP_MODULE    := cnn_accelerator_tb
+TOP_MODULE    := flatten_tb
 
 # Simulation flags (ENABLE VCD DUMPING)
 VSIM_FLAGS    := -c -do "run -all; quit -f" -voptargs="+acc" +vcdfile=$(VCD_FILE)
@@ -28,7 +28,7 @@ all: run
 # Compile RTL & Testbench (with SystemVerilog support)
 compile:
 	@if [ ! -d $(BUILD_DIR) ]; then mkdir -p $(BUILD_DIR); fi
-	$(VLOG) -work $(BUILD_DIR) -sv +acc $(DESIGN_FILES) $(TB_FILES)
+	$(VLOG) -work $(BUILD_DIR) -sv +acc -svinputport=relaxed $(DESIGN_FILES) $(TB_DIR)/$(TOP_MODULE).sv
 
 # Run simulation (force VCD dump)
 sim: compile
@@ -39,8 +39,8 @@ wave:
 	$(GTKWAVE) $(VCD_FILE) myview.sav 2>/dev/null &
 
 # Full flow: compile → simulate → view waveforms
-# run: clean sim
-run: clean imgToTxt sim png
+run: clean sim
+# run: clean imgToTxt sim png
 
 # Clean build artifacts
 clean:
