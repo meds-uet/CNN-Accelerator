@@ -4,73 +4,47 @@
 //
 // Description:
 //
-// Author: Abdullah Nadeem / Talha Ayyaz
+// Author: Abdullah Nadeem & Talha Ayyaz
 // Date:   16/07/2025
 
 `include "cnn_defs.svh"
 
-module cnn_accelerator #(
-    parameter int IFMAP_HEIGHT    = IFMAP_HEIGHT,
-    parameter int IFMAP_WIDTH     = IFMAP_WIDTH,
-    parameter int KERNEL_HEIGHT   = KERNEL_HEIGHT,
-    parameter int KERNEL_WIDTH    = KERNEL_WIDTH,
-    parameter int DATA_WIDTH      = DATA_WIDTH,
-    parameter int H_STRIDE        = H_STRIDE,
-    parameter int V_STRIDE        = V_STRIDE,
-    parameter int PADDING         = PADDING
-)(
+module cnn_accelerator (
     input  logic clk,
     input  logic reset,
     input  logic en,
 
-    input  logic [DATA_WIDTH-1:0] ifmap_in [0:IFMAP_HEIGHT-1][0:IFMAP_WIDTH-1],                        // Unsigned
-    input  logic signed [DATA_WIDTH-1:0] weights [0:KERNEL_HEIGHT-1][0:KERNEL_WIDTH-1],               // Signed
+    input  logic        [DATA_WIDTH-1:0]    cnn_ifmap   [0:IFMAP_SIZE-1][0:IFMAP_SIZE-1],                   // Unsigned
+    input  logic signed [DATA_WIDTH-1:0]    weights     [0:KERNEL_SIZE-1][0:KERNEL_SIZE-1],                 // Signed
 
-    output logic [DATA_WIDTH-1:0] out_feature [0:(IFMAP_HEIGHT-KERNEL_HEIGHT+2*PADDING)/V_STRIDE/2]
-                                                  [0:(IFMAP_WIDTH-KERNEL_WIDTH+2*PADDING)/H_STRIDE/2],  // Final Output
+    output logic        [DATA_WIDTH-1:0]    cnn_ofmap   [0:POOL_OFMAP_SIZE-1][0:POOL_OFMAP_SIZE-1],         // Final Output
 
     output logic done
 );
 
-    localparam int CONV_OUT_HEIGHT = (IFMAP_HEIGHT  - KERNEL_HEIGHT + 2 * PADDING) / V_STRIDE;
-    localparam int CONV_OUT_WIDTH  = (IFMAP_WIDTH   - KERNEL_WIDTH  + 2 * PADDING) / H_STRIDE;
-
     // Intermediate signal from conv to maxpool
-    logic [DATA_WIDTH-1:0] conv_out [0:CONV_OUT_HEIGHT][0:CONV_OUT_WIDTH];
-    logic done_conv, done_pool;
+    logic [DATA_WIDTH-1:0] conv_ofmap [0:CONV_OFMAP_SIZE-1][0:CONV_OFMAP_SIZE-1];
+    logic conv_done, done_pool;
 
     // Conv Layer
-    conv #(
-        .IFMAP_HEIGHT   (IFMAP_HEIGHT),
-        .IFMAP_WIDTH    (IFMAP_WIDTH),
-        .KERNEL_HEIGHT  (KERNEL_HEIGHT),
-        .KERNEL_WIDTH   (KERNEL_WIDTH),
-        .DATA_WIDTH     (DATA_WIDTH),
-        .H_STRIDE       (H_STRIDE),
-        .V_STRIDE       (V_STRIDE),
-        .PADDING        (PADDING)
-    ) conv_inst (
+    conv conv_inst (
         .clk        (clk),
         .reset      (reset),
         .en         (en),
-        .ifmap      (ifmap_in),
+        .conv_ifmap (cnn_ifmap),
         .weights    (weights),
-        .ofmap      (conv_out),
-        .done_conv  (done_conv)
+        .conv_ofmap (conv_ofmap),
+        .conv_done  (conv_done)
     );
 
     // MaxPool Layer
-    maxpool #(
-        .IFMAP_HEIGHT (CONV_OUT_HEIGHT + 1), // +1 to match SV indexing
-        .IFMAP_WIDTH  (CONV_OUT_WIDTH + 1),
-        .DATA_WIDTH   (DATA_WIDTH)
-    ) maxpool_inst (
+    maxpool maxpool_inst (
         .clk        (clk),
         .reset      (reset),
-        .en         (done_conv),
-        .ifmap      (conv_out),
-        .ofmap      (out_feature),
-        .done_pool  (done_pool)
+        .en         (conv_done),
+        .pool_ifmap (conv_ofmap),
+        .pool_ofmap (cnn_ofmap),
+        .pool_done  (done_pool)
     );
 
     assign done = done_pool;
