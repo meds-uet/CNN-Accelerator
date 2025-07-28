@@ -14,31 +14,38 @@
 `include "cnn_defs.svh"
 
 module comparator (
-        input   logic   [DATA_WIDTH-1:0] input1, input2, input3, input4,
-        output  logic   [DATA_WIDTH-1:0] max_val
-    );
+    input  logic [DATA_WIDTH-1:0] in [1:0][1:0],  // 2x2 input matrix
+    output logic [DATA_WIDTH-1:0] out,            // Pooled max value
+    output logic maxpool_done
+);
 
-    // Intermediate signals
-    logic [DATA_WIDTH-1:0] max_top, max_bottom;
+    // intermediate maximum values
+    logic [DATA_WIDTH-1:0] max_top;
+    logic [DATA_WIDTH-1:0] max_bottom;
 
     always_comb begin
+        maxpool_done = 0;
+        // Compare top row
+        if (in[0][0] > in[0][1])
+            max_top = in[0][0];
+        else
+            max_top = in[0][1];
 
-        if (input1 > input2) 
-            max_top = input1; 
-        else 
-            max_top = input2;
-        
+        // Compare bottom row
+        if (in[1][0] > in[1][1])
+            max_bottom = in[1][0];
+        else
+            max_bottom = in[1][1];
 
-        if (input3 > input4) 
-            max_bottom = input3; 
-        else 
-            max_bottom = input4;
-        
-        if (max_top > max_bottom) 
-            max_val = max_top;
-        else 
-            max_val = max_bottom;
-
+        // Compare max values
+        if (max_top > max_bottom) begin
+            out = max_top;
+            maxpool_done = 1;
+        end else begin
+            out = max_bottom;
+            maxpool_done = 1;
+        end
     end
 
 endmodule
+
