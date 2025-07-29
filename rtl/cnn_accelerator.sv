@@ -42,9 +42,9 @@ module cnn_accelerator (
         .clk        (clk),
         .reset      (reset),
         .en         (conv_done),
-        .pool_ifmap (conv_ofmap),
-        .pool_ofmap (cnn_ofmap),
-        .pool_done  (done_pool)
+        .ifmap      (conv_ofmap),
+        .ofmap      (cnn_ofmap),
+        .done_pool  (done_pool)
     );
 
     assign done = done_pool;

@@ -15,9 +15,9 @@
 // Global CNN Parameters
 // -----------------------------------------------------------------------------
 parameter int DATA_WIDTH      = 8;
-parameter int IFMAP_SIZE      = 128;
+parameter int IFMAP_SIZE      = 256;
 parameter int KERNEL_SIZE     = 3;
-parameter int STRIDE          = 2;
+parameter int STRIDE          = 1;
 parameter int PADDING         = 1;
 
 // -----------------------------------------------------------------------------

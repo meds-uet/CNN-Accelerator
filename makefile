@@ -7,9 +7,9 @@ BUILD_DIR     := build
 DESIGN_FILES  := $(wildcard $(RTL_DIR)/*.sv)
 # TB_FILES      := $(wildcard $(TB_DIR)/*.sv)
 VCD_FILE      := wave.vcd
-IMG 		  := test/imgs/image2.png
+IMG 		  := test/imgs/Image3.png
 # IMG := ofmap.png
-SIZE := 128x128
+SIZE := 256x256
 
 # Tools
 VLOG          := vlog
@@ -17,7 +17,7 @@ VSIM          := vsim
 GTKWAVE       := gtkwave
 
 # Top module
-TOP_MODULE    := flatten_tb
+TOP_MODULE    := conv_tb
 
 # Simulation flags (ENABLE VCD DUMPING)
 VSIM_FLAGS    := -c -do "run -all; quit -f" -voptargs="+acc" +vcdfile=$(VCD_FILE)
@@ -26,7 +26,7 @@ VSIM_FLAGS    := -c -do "run -all; quit -f" -voptargs="+acc" +vcdfile=$(VCD_FILE
 all: run
 
 # Compile RTL & Testbench (with SystemVerilog support)
-compile:
+compile: imgToTxt
 	@if [ ! -d $(BUILD_DIR) ]; then mkdir -p $(BUILD_DIR); fi
 	$(VLOG) -work $(BUILD_DIR) -sv +acc -svinputport=relaxed $(DESIGN_FILES) $(TB_DIR)/$(TOP_MODULE).sv
 

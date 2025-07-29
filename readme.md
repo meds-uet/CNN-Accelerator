@@ -120,26 +120,36 @@ Derived parameters include:
 - `MAC_RESULT_WIDTH`: Bit-width of MAC result based on kernel size and pixel depth  
 - FSM state definitions: Control logic for `conv` and `pool` modules  
 
-These parameters make the design **easily configurable** (except for max pooling since 2x2 max pooling is the most used and efficent) for different CNN sizes and hardware constraints.
+These parameters make the design **easily configurable**  for different CNN sizes and hardware constraints.
 
 ---
 
 ## How It Works – Data Flow
 
+This CNN accelerator performs the standard operations in a forward pass of a convolutional neural network. Below is a breakdown of how data flows through each stage:
+
 1. **Convolution:**
 
-   - Slide kernel over input
-   - Perform multiply-accumulate
-   - Apply ReLU
+   - The input feature map (`cnn_ifmap`) is a 2D image represented as a matrix of pixel values.
+   - A convolution window of size `KERNEL_SIZE x KERNEL_SIZE` slides over the input matrix with a defined `STRIDE` and optional `PADDING`.
+   - At each position, corresponding input pixels and kernel weights are multiplied and summed using a **MAC (Multiply-Accumulate)** unit.
+   - The sum is passed through a **ReLU (Rectified Linear Unit)** function, which sets all negative outputs to zero, introducing non-linearity.
+   - The result is stored in the **convolution output feature map**, whose dimensions depend on the stride, padding, and kernel size.
 
 2. **Max Pooling:**
 
-   - Extract non-overlapping 2x2 regions
-   - Select maximum in each block
+   - The convolution output is fed into the **maxpool module**, which performs 2x2 non-overlapping window scans.
+   - For each 2x2 block, the **maximum value** is selected using the `comparator` module.
+   - This reduces the spatial resolution (typically by a factor of 2), keeping the most prominent features and reducing computation in subsequent layers.
+   - The result is the **pooled feature map**, a downsampled version of the convolution output.
 
 3. **Flatten (Optional):**
 
-   - Reshape pooled feature map for use in dense layers
+   - The 2D pooled output matrix is **flattened** into a 1D vector using row-major order.
+   - This is often necessary before feeding the output into **fully connected (dense) layers**, which expect linear input.
+   - The flattening process maintains the spatial ordering so that feature information is preserved.
+
+Each stage is controlled using FSMs (Finite State Machines), enabling synchronization, data reuse, and high throughput under a clocked design.
 
 ---
 
@@ -196,7 +206,8 @@ These help in preparing input matrices and comparing output from simulation.
   - Bias addition
   - Fully connected layers
   - Batch processing
-
+- Max pooling operation is **non-configurable** (set to 2x2) since it is most efficent and used in 2 x 2 pooling
+- Input kernel is **unsigned** due to pixel values ranging from 0 - 255 (in a greyscale image)
 ---
 
 ## License
