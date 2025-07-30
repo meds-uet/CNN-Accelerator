@@ -1,227 +1,373 @@
-# CNN Accelerator – System Verilog HDL Implementation
+# CNN Hardware Accelerator - SystemVerilog Implementation
 
-**Developed by:** Abdullah Nadeem & Talha Ayyaz\
-**License:** Apache License 2.0\
+**Developed by:** Abdullah Nadeem & Talha Ayyaz  
+**Organization:** Maktab-e-Digital Systems Lahore  
+**License:** Apache License 2.0  
 **Date:** July/August 2025
 
 ---
 
-## Overview
+## Table of Contents
 
-This project implements a **Convolutional Neural Network (CNN) Accelerator** using **SystemVerilog**, designed to run basic CNN operations in hardware. It includes modules for **convolution**, **ReLU activation**, **max pooling**, and **flattening**. The design is modular and reusable, aiming to support efficient CNN inference on FPGA or ASIC platforms.
+- [Why This Project Matters](#why-this-project-matters)
+- [What Is a CNN Accelerator?](#what-is-a-cnn-accelerator)
+- [Architecture Overview](#architecture-overview)
+- [Core Modules](#core-modules)
+- [Global Parameters](#global-parameters)
+- [Data Flow and Operation](#data-flow-and-operation)
+- [Signal Descriptions](#signal-descriptions)
+- [Performance Characteristics](#performance-characteristics)
+- [Testbench Results](#testbench-results)
+- [Usage Guidelines](#usage-guidelines)
+- [Requirements](#requirements)
+- [Future Enhancements](#future-enhancements)
+- [License](#license)
+- [Credits](#credits)
+- [Contact](#contact)
+
+---
+## Abstract
+
+This project presents a complete hardware implementation of a Convolutional Neural Network (CNN) accelerator using SystemVerilog HDL. The design features modular components for convolution, ReLU activation, max pooling, and flattening operations, optimized for FPGA and ASIC deployment. The accelerator achieves significant performance improvements over software implementations. The design supports configurable parameters and includes real-image testbench demonstrations.
 
 ---
 
+## How the CNN Accelerator Works
+
+At a high level, the CNN accelerator mimics the structure of a typical convolutional neural network in hardware. It operates on grayscale image inputs and processes them through several dedicated hardware blocks:
+
+1. **Convolution + ReLU Block**:  
+   Applies a sliding window 3×3 kernel to the input image, performing multiply-accumulate (MAC) operations to extract features. The result is passed through a ReLU activation function to zero out negative values.
+
+2. **Max Pooling Block**:  
+   Reduces the spatial dimensions of the feature maps using 2×2 max pooling, helping to retain essential features while lowering computational load.
+
+3. **Flatten Block**:  
+   Converts the pooled 2D matrix into a 1D vector that can be directly fed into a classifier or fully connected layer in later stages.
+
+Each operation is fully pipelined and controlled using finite state machines (FSMs) to ensure efficient and parallel execution. The design is parameterized and reusable, making it suitable for both FPGA prototyping and ASIC flows.
+
+---
+
+
+
 ## Why This Project Matters
 
-Software-based CNNs are powerful but often slow for edge devices. A **hardware accelerator** speeds up operations like convolution and pooling, making CNNs usable in real-time applications such as:
+Software-based CNNs are powerful but too slow for edge devices and real-time applications. A **hardware accelerator** dramatically speeds up operations like convolution and pooling, making CNNs viable for:
 
-- Image recognition
-- Object detection
-- Video processing
-- Embedded AI systems
+- Real-time image recognition and classification  
+- Object detection in autonomous systems  
+- Video processing pipelines  
+- Embedded AI systems  
+- Edge computing
 
 ---
 
 ## What Is a CNN Accelerator?
 
-A **CNN accelerator** is a specialized hardware system designed to execute convolutional neural network computations faster and more efficiently than general-purpose processors. It achieves this by:
+A CNN accelerator is custom hardware optimized to compute CNN operations efficiently using:
 
-- Using **parallel computation units** like MACs (Multiply-Accumulate units)
-- Implementing **convolution, pooling, and activation** in hardware
-- Minimizing memory access delays by using local buffers or registers
+- Parallel MAC (multiply-accumulate) units  
+- Local memory buffers  
+- FSM-driven pipelines  
+- ReLU and pooling operations in hardware  
 
-These accelerators significantly reduce latency and power usage, making them ideal for embedded and real-time systems.
+Ideal for fast, low-power inference on embedded platforms.
 
 ---
 
-## Project Structure
+## Architecture Overview
 
-### Top-Level Module
+### Top-Level Module: `cnn_accelerator.sv`
 
-#### `cnn_accelerator.sv`
+Orchestrates the entire CNN pipeline:
 
-This is the **main module** that connects all the individual components together:
+**Flow:**  
+`Input → Convolution + ReLU → Max Pooling → Flatten → Output`
 
-- Accepts an input feature map and kernel (filter)
-- Performs convolution
-- Applies **ReLU activation**
-- Applies **2x2 max pooling**
-- Outputs the final feature map
+**Image:**  
+![Top-Level Accelerator Flow](docs/Diagrams/Architecure.png)
 
-**Inputs:**
-
-- Clock, reset, and enable signals
-- Unsigned input image  (`cnn_ifmap`)
-- Signed kernel weights
-
-**Outputs:**
-
-- Unsigned pooled output (`cnn_ofmap`)
-- `done` signal indicating processing is complete
+>*Figure 1: Top Level Diagram*
 
 ---
 
 ## Core Modules
 
-### 1. `conv.sv` – Convolution Layer
+### 1. Convolution Module (`conv.sv`)
 
-Performs the **2D convolution** between the input feature map and kernel:
+Applies a 2D convolution and ReLU activation.
 
-- Supports **padding** and **stride**
-- Includes **ReLU activation** (sets negative results to zero)
-- Uses a **MAC unit** to compute the sum of element-wise multiplications
-- Controlled by a simple **Finite State Machine (FSM)**
+**Key Features:**
+- Sliding window convolution  
+- Zero-padding and stride control  
+- ReLU activation built-in  
+- FSM-based operation  
 
-**Performance Note:** The latency for the MAC/Convolution operation on a **6x6 input** is approximately **360 picoseconds**, which is significantly faster than equivalent software implementations in Python, C++, or MATLAB. While high-level languages may take microseconds or milliseconds due to sequential execution and software overhead, SystemVerilog enables **parallelism and clock-level control**, providing a much lower-latency, hardware-accelerated solution.
+**Image:**
+![Convolution Output](docs/Diagrams/Conv.png)
 
-### 2. `mac.sv` – Multiply-Accumulate (MAC) Unit
+> *Figure 2: Convolution Diagram*
 
-- Takes two `KERNEL_SIZE x KERNEL_SIZE` matrices:
-  - **Feature window** (unsigned)
-  - **Kernel weights** (signed)
-- Outputs the **accumulated dot product**
-- Internally handles bit-width and signed multiplication
+---
 
-### 3. `maxpool.sv` – Max Pooling Layer
+### 2. MAC Unit (`mac.sv`)
 
-Applies **2x2 max pooling** with stride 2:
+Optimized multiply-accumulate logic for convolution.
 
-- Reduces the size of the feature map by selecting the **maximum value** in every 2x2 block
-- Uses a **comparator module** to find the max
-- Also uses a state machine for control
+**Highlights:**
+- Parallel multipliers  
+- Adder tree  
+- One-cycle accumulation  
 
-### 4. `comparator.sv` – 2x2 Max Comparator
+**Image:**
+![MAC Operation](docs/Diagrams/MAC.png)
 
-Takes four `DATA_WIDTH` size unsigned inputs and returns the **maximum**. Used in max pooling.
+> *Figure 3: MAC unit architecture (multipliers + adder tree)*
 
-### 5. `flatten.sv` – Flattening Layer
+---
 
-Converts the 2D pooled feature map into a **1D vector**:
+### 3. MaxPooling Module (`maxpool.sv`)
 
-- Required before passing data to fully connected layers in CNNs
-- Preserves spatial order using row-major flattening
+Performs 2×2 max pooling with stride 2.
+
+**Key Features:**
+- 2×2 window extractor  
+- 3-stage comparator logic  
+- FSM-controlled state machine  
+
+**Image:**
+![MaxPooling Output](docs/Diagrams/Maxpool.png)
+
+> *Figure 4: Maxpool Diagram*
+
+---
+
+### 4. Comparator Unit (`comparator.sv`)
+
+Selects the maximum of a 2×2 input.
+
+**Highlights:**
+- Three comparator stages  
+- Single-cycle output  
+- Unsigned input handling  
+
+**Image:**
+![Comparator Block](docs/Diagrams/Comparator.png)
+
+> *Figure 5: Comparator logic to extract max from 4 inputs*
+
+---
+
+### 5. Flatten Module (`flatten.sv`)
+
+Converts 2D pooled maps to 1D vectors.
+
+**Features:**
+- Row-major flattening  
+- Output ready for fully connected layers  
+
+**Image:**
+![Flatten Output](docs/Diagrams/Flatten.png)
+
+> *Figure 6: Flatten Diagram*
 
 ---
 
 ## Global Parameters
 
-Defined in `cnn_defs.sv`:
+Defined in `cnn_defs.svh`:
 
-- `DATA_WIDTH`: Bit width of each pixel or weight (set to 8 bits for 0-255 **greyscale pixel range**)  
-- `IFMAP_SIZE`: Input feature map size (for testing : 128x128)  
-- `KERNEL_SIZE`: Size of convolution kernel (default: 3x3 or 5x5)  
-- `STRIDE`, `PADDING`: Stride and zero-padding for convolution  
-
-Derived parameters include:
-
-- `CONV_OFMAP_SIZE`: Output size after convolution  
-- `POOL_OFMAP_SIZE`: Output size after 2x2 pooling  
-- `MAC_RESULT_WIDTH`: Bit-width of MAC result based on kernel size and pixel depth  
-- FSM state definitions: Control logic for `conv` and `pool` modules  
-
-These parameters make the design **easily configurable**  for different CNN sizes and hardware constraints.
+| Parameter | Value | Description |
+|----------|--------|-------------|
+| `DATA_WIDTH` | 8 | Bit width of input/weights |
+| `IFMAP_SIZE` | 128×128 | Input image size |
+| `KERNEL_SIZE` | 3×3 | Convolution kernel size |
+| `STRIDE` | 1 or 2 | Step size |
+| `PADDING` | 1 | Zero-padding |
+| `MAC_RESULT_WIDTH` | 19 | MAC accumulator width |
 
 ---
 
-## How It Works – Data Flow
+## Data Flow and Operation
 
-This CNN accelerator performs the standard operations in a forward pass of a convolutional neural network. Below is a breakdown of how data flows through each stage:
+### Processing Pipeline
 
-1. **Convolution:**
+1. **Convolution + ReLU:** Extract windows → MAC → ReLU  
+2. **Max Pooling:** 2x2 max selection → downsampling  
+3. **Flatten:** 2D → 1D vector for classifier input  
 
-   - The input feature map (`cnn_ifmap`) is a 2D image represented as a matrix of pixel values.
-   - A convolution window of size `KERNEL_SIZE x KERNEL_SIZE` slides over the input matrix with a defined `STRIDE` and optional `PADDING`.
-   - At each position, corresponding input pixels and kernel weights are multiplied and summed using a **MAC (Multiply-Accumulate)** unit.
-   - The sum is passed through a **ReLU (Rectified Linear Unit)** function, which sets all negative outputs to zero, introducing non-linearity.
-   - The result is stored in the **convolution output feature map**, whose dimensions depend on the stride, padding, and kernel size.
-
-2. **Max Pooling:**
-
-   - The convolution output is fed into the **maxpool module**, which performs 2x2 non-overlapping window scans.
-   - For each 2x2 block, the **maximum value** is selected using the `comparator` module.
-   - This reduces the spatial resolution (typically by a factor of 2), keeping the most prominent features and reducing computation in subsequent layers.
-   - The result is the **pooled feature map**, a downsampled version of the convolution output.
-
-3. **Flatten (Optional):**
-
-   - The 2D pooled output matrix is **flattened** into a 1D vector using row-major order.
-   - This is often necessary before feeding the output into **fully connected (dense) layers**, which expect linear input.
-   - The flattening process maintains the spatial ordering so that feature information is preserved.
-
-Each stage is controlled using FSMs (Finite State Machines), enabling synchronization, data reuse, and high throughput under a clocked design.
+**FSM States:**  
+- `IDLE` → `PROCESSING` → `DONE`  
 
 ---
 
-## Use Cases
+## Signal Descriptions
 
-- FPGA/ASIC CNN acceleration
-- RTL simulation and verification of CNNs
-- Learning project for digital design and SystemVerilog
+### Inputs
+
+| Signal | Width | Description |
+|--------|--------|-------------|
+| `clk` | 1 | Clock |
+| `reset` | 1 | Active-high async reset |
+| `en` | 1 | Start signal |
+| `cnn_ifmap` | `[DATA_WIDTH-1:0]` | Input image |
+| `weights` | `[DATA_WIDTH-1:0]` | Convolution kernel |
+
+### Outputs
+
+| Signal | Width | Description |
+|--------|--------|-------------|
+| `cnn_ofmap` | `[DATA_WIDTH-1:0]` | Final output |
+| `conv_ofmap` | `[DATA_WIDTH-1:0]` | After convolution |
+| `pool_ofmap` | `[DATA_WIDTH-1:0]` | After pooling |
+| `done` | 1 | Completion flag |
 
 ---
 
-## How to Use
+## Performance Characteristics
 
-1. Set desired parameters in `cnn_defs.sv`
-2. Instantiate `cnn_accelerator` in your testbench
-3. Provide a valid `cnn_ifmap` and `weights`
-4. Monitor `cnn_ofmap` and `done` signal
+| Operation | Latency | Description |
+|-----------|---------|-------------|
+| Convolution | CONV_OFMAP² + 2 cycles | Parallel MAC with FSM |
+| MaxPooling | POOL_OFMAP² + 2 cycles | 3 comparator stages |
+| Throughput | 1 result/cycle | Fully pipelined |
+| MAC Latency | Platform dependent | Synthesized for FPGA/ASIC |
+
+---
+
+## Testbench Results
+
+### Input Image
+![Input Image](docs/Diagrams/InputOP.png)  
+*Figure: Original grayscale image, 256×256*
+
+### Convolution Output
+![Convolution Result](docs/Diagrams/ConvOP.png)  
+*Figure: After 3x3 Laplacian convolution and ReLU*
+
+### MaxPooling Output
+![MaxPool Result](docs/Diagrams/maxpoolOP.png)  
+*Figure: After 2x2 max pooling (downsampled to 128×128)*
+
+---
+
+## Usage Guidelines
+
+### Configuration
+
+### Configuring Modules with Parameters
+
+Each module in the CNN accelerator is parameterized to support different image sizes, kernel configurations, and arithmetic precision. You can modify the parameters globally by editing the `cnn_defs.svh` file, or locally during module instantiation.
+
+**Common Parameters:**
+
+| Parameter | Description |
+|-----------|-------------|
+| `DATA_WIDTH` | Bit width for pixel and weight data (e.g., 8 for 8-bit inputs) |
+| `IFMAP_SIZE` | Size of the input feature map (e.g., 128 for 128×128 images) |
+| `KERNEL_SIZE` | Size of the convolution kernel (typically 3) |
+| `STRIDE` | Step size used in convolution or pooling |
+| `PADDING` | Zero-padding around the input feature map |
+| `MAC_RESULT_WIDTH` | Bit width of the MAC output accumulator |
+
+**Example: Modifying Parameters in `cnn_defs.svh`**
+```systemverilog
+parameter int DATA_WIDTH        = 8;
+parameter int IFMAP_SIZE        = 256;
+parameter int KERNEL_SIZE       = 3;
+parameter int STRIDE            = 1;
+parameter int PADDING           = 1;
+```
+
+Adjusting these parameters will automatically scale the functionality and resource usage of the modules accordingly.
+
+
+
+### Run Flow
+```systemverilog
+enable = 1;
+wait (processing_done);
+read_output(output_result);
+```
 
 ---
 
 ## Requirements
 
-To simulate and verify the design:
-
-### HDL Simulation:
-
-- **ModelSim or QuestaSim** – Required to run simulations (`vsim` command)
-- **SystemVerilog support** in simulator
-
-### Python Pre/Post-processing :
-
-Used for image preprocessing and verification:
+- **Simulators:** ModelSim, QuestaSim, VCS, Vivado Simulator  
+- **Synthesis:** Vivado, Quartus, Design Compiler  
+- **Python Tools:** For image loading and testbench data generation
 
 ```python
 from PIL import Image
 import numpy as np
+
+img = Image.open("input.png").convert('L').resize((256, 256))
+pixels = np.array(img, dtype=np.uint8)
 ```
-
-These help in preparing input matrices and comparing output from simulation.
-
-**Key Notes:**
-
-- Make sure your simulator license supports SystemVerilog multidimensional arrays.
-- Maintain consistent `DATA_WIDTH` across input preparation and RTL.
-- Python tools can generate `cnn_ifmap` and `weights` as `.mem` or `.hex` files for loading into testbenches.
 
 ---
 
-## Notes
+## Future Enhancements
 
-- Currently supports **one convolution kernel** and **one image**
-- Working on expanding this to:
-  - Multiple kernels (for multiple channels)
-  - Bias addition
-  - Fully connected layers
-  - Batch processing
-- Max pooling operation is **non-configurable** (set to 2x2) since it is most efficent and used in 2 x 2 pooling
-- Input kernel is **unsigned** due to pixel values ranging from 0 - 255 (in a greyscale image)
+- [ ] Multi-kernel/multi-channel support  
+- [ ] Bias addition in convolution  
+- [ ] Larger or dynamic pooling sizes  
+- [ ] Fully connected layers  
+- [ ] Quantization (INT4, INT2)  
+- [ ] AXI interface & DMA  
+- [ ] Power management  
+
+---
+
+## Project Structure
+
+```
+cnn_accelerator/
+├── rtl/
+│   ├── cnn_accelerator.sv
+│   ├── conv.sv
+│   ├── mac.sv
+│   ├── maxpool.sv
+│   ├── comparator.sv
+│   ├── flatten.sv
+│   └── cnn_defs.svh
+├── test/
+│   ├── cnn_tb.sv
+│   └── imgs/
+├── docs/
+│   └── index.md
+│ 
+├── scripts/
+│   ├── pgmToTxt.sh
+│   └── txtToPng.py
+│
+├── makefile 
+```
+
 ---
 
 ## License
 
-This project is licensed under the **Apache License 2.0**.\
-See the LICENSE file for more details.
+Licensed under the **Apache License 2.0**.  
+See [LICENSE](LICENSE) for full terms.
 
 ---
 
 ## Credits
 
-Developed by:
+- **Abdullah Nadeem** — System Architecture & RTL Implementation  
+- **Talha Ayyaz** — Verification & Optimization  
 
-- Abdullah Nadeem
-- Talha Ayyaz\
-  **Maktab-e-Digital Systems, Lahore – July/August 2025**
+---
 
+## Contact
+
+**Maktab-e-Digital Systems Lahore**  
+Lahore, Punjab, Pakistan  
+*[\[GitHub Repository Link\]](https://github.com/meds-uet/CNN-Accelerator)*
+
+---
+
+*This project is a practical, hardware-level implementation of CNN inference designed for FPGAs.*
