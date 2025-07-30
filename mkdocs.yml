@@ -1,0 +1,5 @@
+site_name: CNN Accelerator
+nav:
+  - Home: readme.md
+theme:
+  name: readthedocs  
