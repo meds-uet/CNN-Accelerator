@@ -7,9 +7,9 @@ BUILD_DIR     := build
 DESIGN_FILES  := $(wildcard $(RTL_DIR)/*.sv)
 # TB_FILES      := $(wildcard $(TB_DIR)/*.sv)
 VCD_FILE      := wave.vcd
-IMG 		  := test/imgs/Image3.png
+IMG 		  := test/imgs/image2.png
 # IMG := ofmap.png
-SIZE := 256x256
+SIZE := 512x512
 
 # Tools
 VLOG          := vlog
