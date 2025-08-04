@@ -7,7 +7,7 @@ BUILD_DIR     := build
 DESIGN_FILES  := $(wildcard $(RTL_DIR)/*.sv)
 # TB_FILES      := $(wildcard $(TB_DIR)/*.sv)
 VCD_FILE      := wave.vcd
-IMG 		  := test/imgs/image2.png
+IMG 		  := test/imgs/Madara.png
 # IMG := ofmap.png
 SIZE := 512x512
 
@@ -17,7 +17,7 @@ VSIM          := vsim
 GTKWAVE       := gtkwave
 
 # Top module
-TOP_MODULE    := conv_tb
+TOP_MODULE    := cnn_tb.sv
 
 # Simulation flags (ENABLE VCD DUMPING)
 VSIM_FLAGS    := -c -do "run -all; quit -f" -voptargs="+acc" +vcdfile=$(VCD_FILE)

@@ -4,81 +4,110 @@
 //
 // Description:
 //
-// Author: Abdullah Nadeem / Talha Ayyaz
+// Author: Abdullah Nadeem & Talha Ayyaz
 // Date:   14/07/2025
 
 `include "cnn_defs.svh"
 
-module maxpool(
+module maxpool (
     input  logic clk,
     input  logic reset,
     input  logic en,
-
-    input  logic [DATA_WIDTH-1:0] ifmap [0:CONV_OFMAP_SIZE-1][0:CONV_OFMAP_SIZE-1],
-    output logic [DATA_WIDTH-1:0] ofmap [0:(CONV_OFMAP_SIZE/2)-1][0:(CONV_OFMAP_SIZE/2)-1],
-
+    
+    input  logic [DATA_WIDTH-1:0] ifmap  [0:CONV_OFMAP_SIZE-1][0:CONV_OFMAP_SIZE-1],
+    
+    output logic [DATA_WIDTH-1:0] ofmap  [0:(CONV_OFMAP_SIZE/2)-1][0:(CONV_OFMAP_SIZE/2)-1],
+    
     output logic done_pool
 );
 
     localparam int OFMAP_HEIGHT = CONV_OFMAP_SIZE / 2;
     localparam int OFMAP_WIDTH  = CONV_OFMAP_SIZE / 2;
 
-    // FSM state
-    pool_state_t state, next_state;
+    logic [DATA_WIDTH-1:0]        window           [0:1][0:1];
+    logic [DATA_WIDTH-1:0]        max_val;
+    
+    logic [POOL_COUNTER_SIZE-1:0] out_row;
+    logic [POOL_COUNTER_SIZE-1:0] out_col;
+    
+    logic                         maxpool_done;
+    logic                         processing_valid;
+    
+    pool_state_t                  state, next_state;
 
-    // Position counters
-    logic [POOL_COUNTER_SIZE-1:0] out_row, out_col;
 
-    // Maxpool window and result
-    logic [DATA_WIDTH-1:0] window [0:1][0:1];
-    logic [DATA_WIDTH-1:0] max_val;
-    logic maxpool_done;
+    // Comparator Unit
+    comparator comp_inst (
+        .in(window),
+        .out(max_val),
+        .maxpool_done(maxpool_done)
+    );
 
-    logic processing_valid;
 
-    // FSM logic
+    // FSM State Register
     always_ff @(posedge clk or posedge reset) begin
+        
         if (reset)
             state <= IDLE;
+        
         else
             state <= next_state;
     end
 
+
+    // FSM Next State Logic
     always_comb begin
+        
         next_state = state;
+        
         case (state)
             IDLE: begin
                 if (en)
                     next_state = PROCESSING;
             end
+            
             PROCESSING: begin
                 if (maxpool_done && out_row == OFMAP_HEIGHT - 1 && out_col == OFMAP_WIDTH - 1)
                     next_state = DONE;
-                else 
+                else
                     next_state = PROCESSING;
             end
-            DONE: next_state = DONE;
-            default: next_state = IDLE;
+            
+            DONE: 
+                next_state = DONE;
+                
+            default: 
+                next_state = IDLE;
+                
         endcase
     end
 
-    // Row/Col counter logic
+
+    // Output Row/Column Counter Logic
     always_ff @(posedge clk or posedge reset) begin
+        
         if (reset) begin
             out_row <= 0;
             out_col <= 0;
-        end else if (state == PROCESSING && maxpool_done) begin
+        end 
+        
+        else if (state == PROCESSING && maxpool_done) begin
+            
             if (out_col == OFMAP_WIDTH - 1) begin
                 out_col <= 0;
                 out_row <= out_row + 1;
-            end else begin
+            end
+            
+            else begin
                 out_col <= out_col + 1;
             end
         end
     end
 
-    // Load 2x2 window
+
+    // Load 2x2 Window
     always_ff @(posedge clk) begin
+        
         if (state == PROCESSING) begin
             window[0][0] <= ifmap[(out_row << 1)][(out_col << 1)];
             window[0][1] <= ifmap[(out_row << 1)][(out_col << 1) + 1];
@@ -87,32 +116,35 @@ module maxpool(
         end
     end
 
+
+    // Processing Valid Signal
     always_ff @(posedge clk or posedge reset) begin
+        
         if (reset)
             processing_valid <= 0;
+        
         else
-            processing_valid <= (state == PROCESSING);  
+            processing_valid <= (state == PROCESSING);
     end
 
-    // Comparator instance
-    comparator comp_inst (
-        .in(window),
-        .out(max_val),
-        .maxpool_done(maxpool_done)
-    );
 
-
+    // Output Storage
     always_ff @(posedge clk) begin
+        
         if (processing_valid && maxpool_done)
             ofmap[out_row][out_col] <= max_val;
     end
 
-    // Done signal
+
+    // Done Signal
     always_ff @(posedge clk or posedge reset) begin
+        
         if (reset)
             done_pool <= 0;
+        
         else if (state == DONE)
             done_pool <= 1;
+        
         else
             done_pool <= 0;
     end

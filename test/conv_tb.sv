@@ -90,9 +90,9 @@ module conv_tb;
         $fclose(fd);
 
         kernel = '{
-            '{8'sd0, -8'sd1, 8'sd0},
-            '{-8'sd1, 8'sd4, -8'sd1},
-            '{8'sd0, -8'sd1, 8'sd0}
+            '{-8'sd1, 8'sd0, 8'sd1},
+            '{-8'sd2, 8'sd0, 8'sd2},
+            '{-8'sd1, 8'sd0, 8'sd1}
         };
         run_convolution_test();
 
