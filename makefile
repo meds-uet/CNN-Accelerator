@@ -17,7 +17,7 @@ VSIM          := vsim
 GTKWAVE       := gtkwave
 
 # Top module
-TOP_MODULE    := cnn_tb.sv
+TOP_MODULE    := conv_tb
 
 # Simulation flags (ENABLE VCD DUMPING)
 VSIM_FLAGS    := -c -do "run -all; quit -f" -voptargs="+acc" +vcdfile=$(VCD_FILE)
@@ -39,13 +39,13 @@ wave:
 	$(GTKWAVE) $(VCD_FILE) myview.sav 2>/dev/null &
 
 # Full flow: compile → simulate → view waveforms
-run: clean sim
-# run: clean imgToTxt sim png
+# run: clean sim
+run: clean imgToTxt sim png
 
 # Clean build artifacts
 clean:
-	# mv ofmap.png imgs/ofmap.png
 	rm -rf $(BUILD_DIR) transcript *.vcd *.wlf *.png *.pgm *.txt
+	clear
 
 img:
 	convert $(IMG) -resize $(SIZE)! -compress none -depth 8 img.pgm

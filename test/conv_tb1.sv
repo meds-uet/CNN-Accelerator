@@ -70,7 +70,7 @@ module conv_tb1;
 
     // Verification Logic
     always @(posedge clk) begin
-        if (dut.conv_current_state == STATE_PROCESS) begin
+        if (dut.conv_current_state == CONV_PROCESS) begin
             automatic logic [7:0] expected = get_expected_pixel(dut.conv_window_row, dut.conv_window_col);
             automatic logic [7:0] actual   = ofmap[dut.conv_window_row][dut.conv_window_col];
             test_count++;

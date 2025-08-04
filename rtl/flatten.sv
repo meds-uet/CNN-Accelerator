@@ -10,7 +10,7 @@
 `include "cnn_defs.svh"
 
 module flatten(
-    input   logic   [DATA_WIDTH-1:0]    feature     [0:POOL_OFMAP_SIZE-1][0:POOL_OFMAP_SIZE-1],
+    input   logic   [DATA_WIDTH-1:0]    flatten_in  [0:POOL_OFMAP_SIZE-1][0:POOL_OFMAP_SIZE-1],
     output  logic   [DATA_WIDTH-1:0]    flatten_out [0:POOL_PIXEL_COUNT-1]
 );
 
@@ -20,9 +20,11 @@ module flatten(
         for (i = 0; i < POOL_OFMAP_SIZE; i++) begin 
             for (j = 0; j < POOL_OFMAP_SIZE; j++) begin 
                 localparam int FLAT_INDEX = i * POOL_OFMAP_SIZE + j;
-                assign flatten_out[FLAT_INDEX] = feature[i][j];
+                assign flatten_out[FLAT_INDEX] = flatten_in[i][j];
             end
         end
     endgenerate
+
+    // assign flatten_done = (FLAT_INDEX == POOL_PIXEL_COUNT-1);
 
 endmodule

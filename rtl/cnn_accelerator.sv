@@ -16,15 +16,19 @@ module cnn_accelerator (
 
     input  logic        [DATA_WIDTH-1:0]    cnn_ifmap   [0:IFMAP_SIZE-1][0:IFMAP_SIZE-1],                   // Unsigned
     input  logic signed [DATA_WIDTH-1:0]    weights     [0:KERNEL_SIZE-1][0:KERNEL_SIZE-1],                 // Signed
+    input  logic signed [DATA_WIDTH-1:0]    fc_weights     [0:NUM_CLASSES-1][0:POOL_PIXEL_COUNT-1],
+    input  logic signed [FC_BIAS_WIDTH-1:0] fc_bias        [0:NUM_CLASSES-1],
 
-    output logic        [DATA_WIDTH-1:0]    cnn_ofmap   [0:POOL_OFMAP_SIZE-1][0:POOL_OFMAP_SIZE-1],         // Final Output
+    output logic        [DATA_WIDTH-1:0]    cnn_ofmap   [0:POOL_PIXEL_COUNT-1],
+    output logic signed [FC_MAC_WIDTH-1:0]  fc_out   [0:NUM_CLASSES-1],
 
     output logic done
 );
 
     // Intermediate signal from conv to maxpool
-    logic [DATA_WIDTH-1:0] conv_ofmap [0:CONV_OFMAP_SIZE-1][0:CONV_OFMAP_SIZE-1];
-    logic conv_done, done_pool;
+    logic [DATA_WIDTH-1:0]  conv_ofmap  [0:CONV_OFMAP_SIZE-1][0:CONV_OFMAP_SIZE-1];
+    logic [DATA_WIDTH-1:0]  pool_ofmap  [0:POOL_OFMAP_SIZE-1][0:POOL_OFMAP_SIZE-1];         // Final Output
+    logic conv_done, pool_done;
 
     // Conv Layer
     conv conv_inst (
@@ -42,11 +46,28 @@ module cnn_accelerator (
         .clk        (clk),
         .reset      (reset),
         .en         (conv_done),
-        .ifmap      (conv_ofmap),
-        .ofmap      (cnn_ofmap),
-        .done_pool  (done_pool)
+        .pool_ifmap (conv_ofmap),
+        .pool_ofmap (pool_ofmap),
+        .pool_done  (pool_done)
     );
 
-    assign done = done_pool;
+    flatten flatten_inst(
+        .flatten_in(pool_ofmap),
+        .flatten_out(cnn_ofmap)
+    );
+
+    fc_layer fc_inst(
+        .clk(clk),
+        .reset(reset),
+        .en(pool_done),
+        .fc_in(cnn_ofmap),
+        .fc_bias(fc_bias),
+        .fc_weights(fc_weights),
+        .fc_out(fc_out),
+        .done(done)
+
+    );
+
+    // assign done = pool_done;
 
 endmodule

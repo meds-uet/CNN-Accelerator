@@ -7,7 +7,7 @@ module cnn_tb;
     logic reset, en;
     logic           [DATA_WIDTH-1:0]    ifmap   [0:IFMAP_SIZE-1][0:IFMAP_SIZE-1];
     logic signed    [DATA_WIDTH-1:0]    weights     [0:KERNEL_SIZE-1][0:KERNEL_SIZE-1];
-    logic           [DATA_WIDTH-1:0]    ofmap   [0:POOL_OFMAP_SIZE-1][0:POOL_OFMAP_SIZE-1]; // +1 due to 0 indexing
+    logic           [DATA_WIDTH-1:0]    ofmap   [0:POOL_PIXEL_COUNT-1]; // +1 due to 0 indexing
     logic done;
 
     // Clock generation
@@ -61,9 +61,11 @@ module cnn_tb;
             if (!fout) $fatal("Failed to open ofmap.txt");
 
             foreach (ofmap[i]) begin
-                foreach (ofmap[i][j]) begin
-                    $fwrite(fout, "%0d ", ofmap[i][j]);
-                end
+                // foreach (ofmap[i][j]) begin
+                    // $fwrite(fout, "%0d ", ofmap[i][j]);
+                // end
+
+                $fwrite(fout, "%0d ", ofmap[i]);
                 $fwrite(fout, "\n");
             end
 

@@ -20,6 +20,10 @@ parameter int KERNEL_SIZE     = 3;
 parameter int STRIDE          = 1;
 parameter int PADDING         = 1;
 
+parameter int NUM_CLASSES     = 10;
+parameter int FC_BIAS_WIDTH   = 32;
+parameter int FC_MAC_WIDTH    = 32;
+
 // -----------------------------------------------------------------------------
 // Derived CONV Parameters
 // -----------------------------------------------------------------------------
@@ -29,17 +33,17 @@ parameter int CONV_OFMAP_SIZE       = (IFMAP_SIZE - KERNEL_SIZE + 2 * PADDING) /
 parameter int CONV_COUNTER_SIZE     = $clog2(CONV_OFMAP_SIZE);
 
 typedef enum logic [1:0] {
-    STATE_IDLE,
-    STATE_PROCESS,
-    STATE_DONE
+    CONV_IDLE,
+    CONV_PROCESS,
+    CONV_DONE
 } conv_state_t;
 
 // -----------------------------------------------------------------------------
 // Derived MAC Parameters
 // -----------------------------------------------------------------------------
 
-// parameter int MAC_PRODUCT_COUNT     = KERNEL_SIZE * KERNEL_SIZE;
-parameter int MAC_PRODUCT_COUNT     = (KERNEL_SIZE == 3) ? 9 : 25;
+parameter int MAC_PRODUCT_COUNT     = KERNEL_SIZE * KERNEL_SIZE;
+// parameter int MAC_PRODUCT_COUNT     = (KERNEL_SIZE == 3) ? 9 : 25;
 parameter int MAC_PRODUCT_WIDTH     = DATA_WIDTH << 1;
 parameter int MAC_RESULT_WIDTH      = MAC_PRODUCT_WIDTH + $clog2(MAC_PRODUCT_COUNT);
 
@@ -48,15 +52,31 @@ parameter int MAC_RESULT_WIDTH      = MAC_PRODUCT_WIDTH + $clog2(MAC_PRODUCT_COU
 // -----------------------------------------------------------------------------
 
 parameter int POOL_OFMAP_SIZE       = CONV_OFMAP_SIZE >> 1;
+// parameter int POOL_OFMAP_SIZE       = 2;
 parameter int POOL_PIXEL_COUNT      = POOL_OFMAP_SIZE * POOL_OFMAP_SIZE;
+// parameter int POOL_PIXEL_COUNT      = 7;
+
 parameter int POOL_COUNTER_SIZE     = $clog2(POOL_OFMAP_SIZE);            
 // parameter int POOL_COUNTER_SIZE     = $clog2(4);
 
 typedef enum logic [1:0] {
-    IDLE,
-    PROCESSING,
-    DONE
+    POOL_IDLE,
+    POOL_PROCESS,
+    POOL_DONE
 } pool_state_t;
 
+// -----------------------------------------------------------------------------
+// Derived FC Parameters
+// -----------------------------------------------------------------------------
+
+// FSM states
+typedef enum logic [1:0] {
+    FC_IDLE,
+    FC_PROCESS,
+    FC_DONE
+} fc_state_t;
+
+parameter int FC_COUNTER_SIZE       = $clog2(POOL_PIXEL_COUNT);
+parameter int FC_CLASS_COUNTER_SIZE = $clog2(NUM_CLASSES);
 
 `endif

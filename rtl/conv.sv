@@ -59,7 +59,7 @@ module conv (
     always_ff @(posedge clk or posedge reset) begin
 
         if (reset)
-            conv_current_state <= STATE_IDLE;
+            conv_current_state <= CONV_IDLE;
 
         else
             conv_current_state <= conv_next_state;
@@ -70,17 +70,17 @@ module conv (
     always_comb begin
 
         case (conv_current_state)
-            STATE_IDLE: 
+            CONV_IDLE: 
                 if (en)
-                    conv_next_state = STATE_PROCESS;
+                    conv_next_state = CONV_PROCESS;
 
-            STATE_PROCESS:
+            CONV_PROCESS:
                 if (is_last_pixel)
-                    conv_next_state = STATE_DONE;
+                    conv_next_state = CONV_DONE;
                 else    
-                    conv_next_state = STATE_PROCESS;
+                    conv_next_state = CONV_PROCESS;
 
-            STATE_DONE:
+            CONV_DONE:
                 conv_next_state = conv_current_state;
                 
             default:
@@ -94,12 +94,12 @@ module conv (
     always_comb begin
         
         case (conv_current_state)
-            STATE_PROCESS: begin
+            CONV_PROCESS: begin
                 is_process  = 1;
                 is_done     = 0;
             end
 
-            STATE_DONE: begin
+            CONV_DONE: begin
                 is_process  = 0;
                 is_done     = 1; 
             end

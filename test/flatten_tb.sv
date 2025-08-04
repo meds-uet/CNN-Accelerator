@@ -3,9 +3,9 @@
 module flatten_tb;
 
     // Parameters from cnn_defs.svh (example values if not defined)
-    parameter DATA_WIDTH = 8;
-    parameter POOL_OFMAP_SIZE = 2;  // 2x2 pool output
-    parameter POOL_PIXEL_COUNT = POOL_OFMAP_SIZE * POOL_OFMAP_SIZE;
+    // parameter DATA_WIDTH = 8;
+    // parameter POOL_OFMAP_SIZE = 2;  // 2x2 pool output
+    // parameter POOL_PIXEL_COUNT = POOL_OFMAP_SIZE * POOL_OFMAP_SIZE;
 
     // Testbench signals
     logic [DATA_WIDTH-1:0] feature_array [0:POOL_OFMAP_SIZE-1][0:POOL_OFMAP_SIZE-1];
