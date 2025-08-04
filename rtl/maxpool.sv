@@ -4,47 +4,39 @@
 //
 // Description:
 //
-// Author: Abdullah Nadeem & Talha Ayyaz
-// Date:   14/07/2025
+// Author: Abdullah Nadeem / Talha Ayyaz
+// Date:   15/07/2025
 
 `include "cnn_defs.svh"
 
 module maxpool (
-    input  logic clk,
-    input  logic reset,
-    input  logic en,
-    
-    input  logic [DATA_WIDTH-1:0] ifmap  [0:CONV_OFMAP_SIZE-1][0:CONV_OFMAP_SIZE-1],
-    
-    output logic [DATA_WIDTH-1:0] ofmap  [0:(CONV_OFMAP_SIZE/2)-1][0:(CONV_OFMAP_SIZE/2)-1],
-    
-    output logic done_pool
-);
+        input   logic   clk,
+        input   logic   reset,
+        input   logic   en,
+        input   logic   [DATA_WIDTH-1:0]    pool_ifmap   [0:CONV_OFMAP_SIZE-1][0:CONV_OFMAP_SIZE-1],
 
-    localparam int OFMAP_HEIGHT = CONV_OFMAP_SIZE / 2;
-    localparam int OFMAP_WIDTH  = CONV_OFMAP_SIZE / 2;
+        output  logic   [DATA_WIDTH-1:0]    pool_ofmap   [0:POOL_OFMAP_SIZE-1][0:POOL_OFMAP_SIZE-1],
 
-    logic [DATA_WIDTH-1:0]        window           [0:1][0:1];
-    logic [DATA_WIDTH-1:0]        max_val;
-    
-    logic [POOL_COUNTER_SIZE-1:0] out_row;
-    logic [POOL_COUNTER_SIZE-1:0] out_col;
-    
-    logic                         maxpool_done;
-    logic                         processing_valid;
-    
-    pool_state_t                  state, next_state;
-
-
-    // Comparator Unit
-    comparator comp_inst (
-        .in(window),
-        .out(max_val),
-        .maxpool_done(maxpool_done)
+        output  logic   pool_done
     );
 
+    pool_state_t pool_current_state, pool_next_state;
 
-    // FSM State Register
+    // Address counters
+    logic [POOL_COUNTER_SIZE-1:0] pool_window_row;
+    logic [POOL_COUNTER_SIZE-1:0] pool_window_col;
+    logic [$clog2(POOL_PIXEL_COUNT):0] window_count;
+
+    // Pipeline registers for 2x2 window
+    logic [DATA_WIDTH-1:0] pool_window [0:3];
+    logic [DATA_WIDTH-1:0] max_result;
+    logic result_valid;
+
+    // Address tracking for pipeline
+    logic [POOL_COUNTER_SIZE-1:0] result_row;
+    logic [POOL_COUNTER_SIZE-1:0] result_col;
+
+    // State machine
     always_ff @(posedge clk or posedge reset) begin
         if (reset) begin
             pool_current_state <= POOL_IDLE;
@@ -77,10 +69,8 @@ module maxpool (
         endcase
     end
 
-
-    // Output Row/Column Counter Logic
+    // Address generation and control
     always_ff @(posedge clk or posedge reset) begin
-        
         if (reset) begin
             pool_window_row <= 0;
             pool_window_col <= 0;
@@ -178,34 +168,24 @@ module maxpool (
 
     // Register the result for output
     always_ff @(posedge clk or posedge reset) begin
-        
-        if (reset)
-            processing_valid <= 0;
-        
-        else
-            processing_valid <= (state == PROCESSING);
+        if (reset) begin
+            delayed_max <= 0;
+            delayed_row <= 0;
+            delayed_col <= 0;
+            delayed_valid <= 0;
+        end else begin
+            delayed_max <= final_max;
+            delayed_row <= result_row;
+            delayed_col <= result_col;
+            delayed_valid <= result_valid;
+        end
     end
 
-
-    // Output Storage
-    always_ff @(posedge clk) begin
-        
-        if (processing_valid && maxpool_done)
-            ofmap[out_row][out_col] <= max_val;
-    end
-
-
-    // Done Signal
+    // Output assignment
     always_ff @(posedge clk or posedge reset) begin
-        
-        if (reset)
-            done_pool <= 0;
-        
-        else if (state == DONE)
-            done_pool <= 1;
-        
-        else
-            done_pool <= 0;
+    if (delayed_valid && 32'(delayed_row) < POOL_OFMAP_SIZE && 32'(delayed_col) < POOL_OFMAP_SIZE) begin
+            pool_ofmap[delayed_row][delayed_col] <= delayed_max;
+        end
     end
 
 endmodule

@@ -48,11 +48,11 @@ module conv (
         .result(mac_result)
     );
 
-    // always @(clk) $display("Window @[%0d][%0d] [%0d][%0d]: \n%0d %0d %0d\n%0d %0d %0d\n%0d %0d %0d", 
-    // conv_window_row, conv_window_col, targeted_row, targeted_col,
-    // conv_window[0][0], conv_window[0][1], conv_window[0][2],
-    // conv_window[1][0], conv_window[1][1], conv_window[1][2],
-    // conv_window[2][0], conv_window[2][1], conv_window[2][2]);
+    always @(clk) $display("Window @[%0d][%0d] [%0d][%0d]: \n%0d %0d %0d\n%0d %0d %0d\n%0d %0d %0d", 
+    conv_window_row, conv_window_col, targeted_row, targeted_col,
+    conv_window[0][0], conv_window[0][1], conv_window[0][2],
+    conv_window[1][0], conv_window[1][1], conv_window[1][2],
+    conv_window[2][0], conv_window[2][1], conv_window[2][2]);
 
 
     // FSM State Register

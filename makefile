@@ -7,7 +7,7 @@ BUILD_DIR     := build
 DESIGN_FILES  := $(wildcard $(RTL_DIR)/*.sv)
 # TB_FILES      := $(wildcard $(TB_DIR)/*.sv)
 VCD_FILE      := wave.vcd
-IMG 		  := test/imgs/Madara.png
+IMG 		  := test/imgs/Madara.jpg
 # IMG := ofmap.png
 SIZE := 512x512
 
