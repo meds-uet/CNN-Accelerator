@@ -1,7 +1,7 @@
 # CNN Hardware Accelerator
 
 <p align="center">
-  <img src="docs/Diagrams/logo.jpg" alt="CNN Accelerator Logo" width="160">
+  <img src="Diagrams/logo.jpg" alt="CNN Accelerator Logo" width="160">
 </p>
 
 [![License](https://img.shields.io/badge/License-Apache--2.0-green.svg)](https://github.com/meds-uet/CNN-Accelerator/blob/main/LICENSE)
@@ -26,7 +26,7 @@ A fully parameterized **Convolutional Neural Network (CNN) accelerator** impleme
 ## Top-Level Architecture
 
 <p align="center">
-  <img src="docs/Diagrams/Top_CNN.png" alt="System-level CNN Accelerator pipeline" width="600">
+  <img src="Diagrams/Top_CNN.png" alt="System-level CNN Accelerator pipeline" width="600">
   <br>
   <em>Figure: System-level CNN Accelerator pipeline.</em>
 </p>
