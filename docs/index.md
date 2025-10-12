@@ -1,7 +1,7 @@
 # CNN Hardware Accelerator
 
 <p align="center">
-  <img src="Diagrams/logo.jpg" alt="CNN Accelerator Logo" width="160">
+  <img src="Diagrams/logo.jpg" alt="MEDS Logo" width="160">
 </p>
 
 [![License](https://img.shields.io/badge/License-Apache--2.0-green.svg)](https://github.com/meds-uet/CNN-Accelerator/blob/main/LICENSE)
