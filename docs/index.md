@@ -37,18 +37,35 @@ This project presents a complete hardware implementation of a Convolutional Neur
 
 At a high level, the CNN accelerator mimics the structure of a typical convolutional neural network in hardware. It operates on grayscale image inputs and processes them through several dedicated hardware blocks:
 
-1. **Convolution + ReLU Block**  
+1. **Convolution + ReLU Block**
    Applies a sliding window 3×3 kernel to the input image, performing multiply-accumulate (MAC) operations to extract features. The result is passed through a ReLU activation function to zero out negative values.
 
-2. **Max Pooling Block**  
+2. **Max Pooling Block**
    Reduces the spatial dimensions of the feature maps using 2×2 max pooling, helping to retain essential features while lowering computational load.
 
-3. **Flatten Block**  
+3. **Flatten Block**
    Converts the pooled 2D matrix into a 1D vector that can be directly fed into a classifier or fully connected layer in later stages.
+
+4. **Global Average Pooling (GAP) Block**
+   Computes the average of each feature map to produce a compact 1D representation, reducing parameters and hardware complexity.
+
+5. **Argmax Block**
+   Identifies the index of the maximum value in the GAP output, providing the predicted class for classification tasks.
 
 Each operation is fully pipelined and controlled using finite state machines (FSMs) to ensure efficient and parallel execution. The design is parameterized and reusable, making it suitable for both FPGA prototyping and ASIC flows.
 
----
+**Top-Level Flow:**
+
+```
+Input → Convolution + ReLU → Max Pooling → Flatten → GAP → Argmax → Output
+```
+
+**Benefits:**
+
+* Reduces parameter count.
+* Efficient hardware implementation.
+* Suitable for real-time embedded classification tasks.
+
 
 ## Why This Project Matters
 
@@ -84,7 +101,7 @@ Orchestrates the entire CNN pipeline:
 **Flow:**  
 `Input → Convolution + ReLU → Max Pooling → Flatten → Output`
 
-![Figure 1: Top Level Diagram](Diagrams/Architecture.png)
+![Figure 1: Top Level Diagram](Diagrams/Top_CNN.png)
 
 ---
 
@@ -100,7 +117,7 @@ Applies a 2D convolution and ReLU activation.
 - ReLU activation built-in  
 - FSM-based operation  
 
-![Figure 2: Convolution Diagram](Diagrams/Convolution.png)
+![Figure 2: Convolution Diagram](Diagrams/Conv.png)
 
 ---
 
@@ -153,33 +170,85 @@ Converts 2D pooled maps to 1D vectors.
 
 ![Figure 6: Flatten Diagram](Diagrams/Flatten.png)
 
+## 6. Global Average Pooling (GAP) Module
+
+The **Global Average Pooling (GAP)** layer is a lightweight alternative to fully connected layers. Instead of flattening the feature maps and connecting them to dense layers, GAP computes the **average value of each feature map**. This reduces the number of parameters and helps prevent overfitting while maintaining spatial information.
+
+### Features
+
+* Computes the average of each 2D feature map.
+* Produces a 1D vector with a length equal to the number of channels.
+* Fully pipelined for hardware efficiency.
+* Output directly suitable for classification layers.
+
+### Operation
+
+1. Accumulate all pixel values in a feature map.
+2. Divide by the total number of pixels (`IFMAP_SIZE × IFMAP_SIZE`).
+3. Output a single value per feature map.
+
+**FSM States:**
+`IDLE → ACCUMULATE → DIVIDE → DONE`
+
+**Signal Descriptions:**
+
+| Signal           | Width              | Description                   |
+| ---------------- | ------------------ | ----------------------------- |
+| `clk`            | 1                  | Clock                         |
+| `reset`          | 1                  | Active-high async reset       |
+| `en`             | 1                  | Start signal                  |
+| `feature_map_in` | `[DATA_WIDTH-1:0]` | Input feature map             |
+| `gap_out`        | `[DATA_WIDTH-1:0]` | Output vector after averaging |
+| `done`           | 1                  | Completion flag               |
+
+---
+
+## 7. Argmax Module
+
+The **Argmax** module identifies the index of the maximum value in a 1D vector. This is commonly used in classification tasks to select the predicted class with the highest probability.
+
+### Features
+
+* Accepts the 1D vector output from GAP or flatten layer.
+* Returns the **index** corresponding to the largest value.
+* Single-cycle comparator logic for small vectors; pipelined for large vectors.
+* Compatible with fixed-point or integer data.
+
+### Operation
+
+1. Initialize `max_val` and `max_idx` to zero.
+2. Compare each element sequentially (or in a tree structure for large vectors).
+3. Update `max_val` and `max_idx` when a larger value is found.
+4. Output the final `max_idx` as the predicted class.
+
+**FSM States:**
+`IDLE → COMPARE → DONE`
+
+**Signal Descriptions:**
+
+| Signal       | Width                       | Description             |
+| ------------ | --------------------------- | ----------------------- |
+| `clk`        | 1                           | Clock                   |
+| `reset`      | 1                           | Active-high async reset |
+| `en`         | 1                           | Start signal            |
+| `vector_in`  | `[DATA_WIDTH-1:0]`          | Input 1D vector         |
+| `argmax_out` | `[$clog2(VECTOR_SIZE)-1:0]` | Index of the max value  |
+| `done`       | 1                           | Completion flag         |
+
+
 ---
 
 ## Global Parameters
 
 Defined in `cnn_defs.svh`:
 
-| Parameter | Value | Description |
+| Parameter | Standard Value | Description |
 |----------|--------|-------------|
-| `DATA_WIDTH` | 8 | Bit width of input/weights |
-| `IFMAP_SIZE` | 128×128 | Input image size |
-| `KERNEL_SIZE` | 3×3 | Convolution kernel size |
+| `DATA_WIDTH` | 8            | Bit width of input/weights |
+| `IFMAP_SIZE` | Configurable | Input image size |
+| `KERNEL_SIZE` | 3×3 or 5x5  | Convolution kernel size |
 | `STRIDE` | 1 or 2 | Step size |
-| `PADDING` | 1 | Zero-padding |
-| `MAC_RESULT_WIDTH` | 19 | MAC accumulator width |
-
----
-
-## Data Flow and Operation
-
-### Processing Pipeline
-
-1. **Convolution + ReLU:** Extract windows → MAC → ReLU  
-2. **Max Pooling:** 2x2 max selection → downsampling  
-3. **Flatten:** 2D → 1D vector for classifier input  
-
-**FSM States:**  
-- `IDLE` → `PROCESSING` → `DONE`  
+| `PADDING` | 1 or 2 | Zero-padding |
 
 ---
 
