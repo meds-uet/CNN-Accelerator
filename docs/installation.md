@@ -16,7 +16,7 @@ cd CNN-Accelerator
 make setup
 ```
 
-### Run Simulation (Verilator)
+### Run Simulation (Modelsim)
 ```bash
 make sim
 ```
