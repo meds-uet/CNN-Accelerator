@@ -13,15 +13,10 @@
 ```bash
 git clone https://github.com/meds-uet/CNN-Accelerator.git
 cd CNN-Accelerator
-make setup
+make all
 ```
 
 ### Run Simulation (Modelsim)
 ```bash
 make sim
-```
-
-### Run Synthesis (Vivado)
-```bash
-make synth
 ```
