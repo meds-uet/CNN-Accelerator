@@ -63,7 +63,7 @@ parameter int PADDING = 1;
 
 Complete documentation — including **architecture theory**, **module descriptions**, **signal references**, and **simulation setup** — is available on **ReadTheDocs**:
 
-🔗 [https://cnn-hardware-accelerator.readthedocs.io](https://cnn-hardware-accelerator.readthedocs.io)
+🔗 [https://cnn-accelerator-docs.readthedocs.io/en/latest/](https://cnn-accelerator-docs.readthedocs.io/en/latest/)
 
 ---
 
